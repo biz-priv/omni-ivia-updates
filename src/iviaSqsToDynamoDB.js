@@ -18,203 +18,22 @@ const INSTRUCTIONS_TABLE = process.env.INSTRUCTIONS_TABLE;
 const SHIPMENT_DESC_TABLE = process.env.SHIPMENT_DESC_TABLE;
 const INSTRUCTIONS_INDEX_KEY_NAME = process.env.INSTRUCTIONS_INDEX_KEY_NAME;
 // const IVIA_DDB = process.env.IVIA_DDB;
-const IVIA_DDB = "omni-ivia-test";
+const IVIA_DDB = "omni-rt-ivia-dev";
 // const INSTRUCTIONS_INDEX_KEY_NAME = "omni-wt-instructions-orderNo-index-dev";
 
 module.exports.handler = async (event, context, callback) => {
   let sqsEventRecords = [];
   try {
     console.log("event", JSON.stringify(event));
-    // sqsEventRecords = event.Records;
-    sqsEventRecords = [
-      {
-        body: {
-          ApproximateCreationDateTime: 1669855167,
-          Keys: {
-            FK_OrderNo: { S: "4520071" },
-            SeqNo: { S: "2" },
-          },
-          NewImage: {
-            FK_OrderNo: {
-              S: "4520071",
-            },
-            SeqNo: {
-              S: "2",
-            },
-            APARCode: {
-              S: "V",
-            },
-            APARStatus: {
-              S: "",
-            },
-            APARType: {
-              S: "CLB",
-            },
-            ChargeCode: {
-              S: "",
-            },
-            Complete: {
-              S: "N",
-            },
-            Consolidation: {
-              S: "N",
-            },
-            ConsolNo: {
-              S: "0",
-            },
-            ConsolShipDateTime: {
-              S: "1900-01-01 00:00:00.000",
-            },
-            Cost: {
-              S: "14.00",
-            },
-            CreateDateTime: {
-              S: "2022-12-05 11:38:15.623",
-            },
-            Currency: {
-              S: "USD",
-            },
-            CustomerInvoiceNo: {
-              S: "",
-            },
-            Description: {
-              S: "",
-            },
-            DueDate: {
-              S: "1900-01-01 00:00:00.000",
-            },
-            Extra: {
-              S: "0.00",
-            },
-            Finalize: {
-              S: "N",
-            },
-            FinalizedBy: {
-              S: "",
-            },
-            FinalizedDate: {
-              S: "1900-01-01 00:00:00.000",
-            },
-            FinalizedTotal: {
-              S: "0.00",
-            },
-            FK_AccountCode: {
-              S: "",
-            },
-            FK_AirCode: {
-              S: "",
-            },
-            FK_CodeNo: {
-              S: "0",
-            },
-            FK_ConsolStationId: {
-              S: "",
-            },
-            FK_ConsolStatusId: {
-              S: "",
-            },
-            FK_ContainerCode: {
-              S: "",
-            },
-            FK_CustNo: {
-              S: "19197",
-            },
-            FK_EquipmentCode: {
-              S: "NULL",
-            },
-            FK_HandlingStation: {
-              S: "",
-            },
-            FK_PaymentTermCode: {
-              S: "NULL",
-            },
-            FK_PaymentTermCode1: {
-              S: "NULL",
-            },
-            FK_ServiceId: {
-              S: "HS",
-            },
-            FK_VendorId: {
-              S: "T19262",
-            },
-            InsertedTimeStamp: {
-              S: "2022:12:05 11:39:17",
-            },
-            InvoiceDate: {
-              S: "1900-01-01 00:00:00.000",
-            },
-            InvoiceNo: {
-              S: "",
-            },
-            InvoiceSeqNo: {
-              S: "0",
-            },
-            InvPrinted: {
-              S: "N",
-            },
-            InvPrintedDate: {
-              S: "1900-01-01 00:00:00.000",
-            },
-            Override: {
-              S: "R",
-            },
-            PKSeqNo: {
-              S: "37527087",
-            },
-            PostedDateTime: {
-              S: "1900-01-01 00:00:00.000",
-            },
-            Quantity: {
-              S: "2.000",
-            },
-            Rate: {
-              S: "7.0000",
-            },
-            ReadyForInvoice: {
-              S: "N",
-            },
-            ReadyForInvoiceDateTime: {
-              S: "1900-01-01 00:00:00.000",
-            },
-            RefNo: {
-              S: "asd234",
-            },
-            Tax: {
-              S: "0.00",
-            },
-            Total: {
-              S: "14.00",
-            },
-            UpdatedBy: {
-              S: "aakshantal",
-            },
-            UpdatedOn: {
-              S: "2022-12-05 11:38:15.623",
-            },
-            VendorAmount: {
-              S: "0.00",
-            },
-            VendorCostSeqNo: {
-              S: "0",
-            },
-            Weight: {
-              S: "0.0",
-            },
-          },
-          SequenceNumber: "43476800000000022460830226",
-          SizeBytes: 142,
-          StreamViewType: "NEW_AND_OLD_IMAGES",
-          dynamoTableName: "omni-wt-rt-shipment-apar-dev",
-        },
-      },
-    ];
+    sqsEventRecords = event.Records;
+
     const faildSqsItemList = [];
 
     for (let index = 0; index < sqsEventRecords.length; index++) {
       try {
         const sqsItem = sqsEventRecords[index];
-        // dynamoData = JSON.parse(sqsItem.body);
-        const dynamoData = sqsItem.body;
+        const dynamoData = JSON.parse(sqsItem.body);
+        // const dynamoData = sqsItem.body;
         // console.log("dynamoData", dynamoData);
 
         //get the primary key
@@ -246,8 +65,6 @@ module.exports.handler = async (event, context, callback) => {
         console.log("error", error);
       }
     }
-
-    // const iviaData = mapIviaData();
     return prepareBatchFailureObj(faildSqsItemList);
   } catch (error) {
     console.error("Error", error);
