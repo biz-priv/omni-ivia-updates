@@ -214,14 +214,20 @@ function mapIviaData(dataSet, shipmentAparData) {
           },
           cargo: [
             {
-              height: shipmentDesc?.Height ?? "",
-              length: shipmentDesc?.Length ?? "",
+              height: shipmentDesc?.Height
+                ? parseInt(shipmentDesc?.Height)
+                : "",
+              length: shipmentDesc?.Length
+                ? parseInt(shipmentDesc?.Length)
+                : "",
               packageType: "PIE",
               quantity: shipmentDesc?.Pieces ?? "", //req
               stackable: "N", // req [Y / N]
               turnable: "N", // req [Y / N]
-              weight: shipmentDesc?.Weight ?? "", //req
-              width: shipmentDesc?.Width ?? "",
+              weight: shipmentDesc?.Weight
+                ? parseInt(shipmentDesc?.Weight)
+                : "", //req
+              width: shipmentDesc?.Width ? parseInt(shipmentDesc?.Width) : "",
             },
           ],
           companyName: shipper?.ShipName,
