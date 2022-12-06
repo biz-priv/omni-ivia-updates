@@ -4,8 +4,8 @@ IviaResponseDynamoTable:
     TableName: omni-rt-ivia-response-${self:provider.stage}
     BillingMode: PAY_PER_REQUEST
     AttributeDefinitions:
-      - AttributeName: "carrierId"
+      - AttributeName: "id"
         AttributeType: "S"
     KeySchema:
-      - AttributeName: "carrierId"
+      - AttributeName: "id"
         KeyType: HASH
