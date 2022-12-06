@@ -13,6 +13,6 @@ function:
     exclude:
       - "**/*"
   events:
-    - stream: arn:aws:dynamodb:us-east-1:332281781429:table/omni-rt-ivia-dev/stream/2022-12-06T16:56:52.308
+    # - stream: arn:aws:dynamodb:us-east-1:332281781429:table/omni-rt-ivia-dev/stream/2022-12-06T16:56:52.308
   environment:
     # DYNAMO_DB_TABLE: ${ssm:/omni-rt-toyota/${self:provider.stage}/apar-failure/ddb.tableName~true}
