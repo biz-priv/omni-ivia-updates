@@ -1,0 +1,35 @@
+{
+  "name": "omni-ivia-updates",
+  "version": "1.0.0",
+  "description": "omni-ivia-updates",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/bizcloud-experts/omni-ivia-updates.git"
+  },
+  "author": "BizCloud Experts",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/bizcloud-experts/omni-ivia-updates/issues"
+  },
+  "homepage": "https://github.com/bizcloud-experts/omni-ivia-updates#readme",
+  "dependencies": {
+    "aws-sdk": "^2.1163.0",
+    "axios": "^0.27.2",
+    "joi": "^17.6.0",
+    "lodash": "^4.17.21",
+    "lodash.get": "^4.4.2",
+    "moment": "^2.29.3",
+    "moment-timezone": "^0.5.39",
+    "uuid": "^9.0.0",
+    "xmlbuilder2": "^3.0.2"
+  },
+  "devDependencies": {
+    "serverless": "2.72.3",
+    "serverless-offline": "^8.8.0",
+    "serverless-provisioned-concurrency-autoscaling": "^1.9.1"
+  }
+}

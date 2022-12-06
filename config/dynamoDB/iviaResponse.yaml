@@ -1,0 +1,11 @@
+IviaResponseDynamoTable:
+  Type: AWS::DynamoDB::Table
+  Properties:
+    TableName: omni-rt-ivia-response-${self:provider.stage}
+    BillingMode: PAY_PER_REQUEST
+    AttributeDefinitions:
+      - AttributeName: "carrierId"
+        AttributeType: "S"
+    KeySchema:
+      - AttributeName: "carrierId"
+        KeyType: HASH

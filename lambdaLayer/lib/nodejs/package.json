@@ -1,0 +1,22 @@
+{
+  "name": "omni-ivia-layer",
+  "version": "1.0.0",
+  "description": "omni-ivia-layer",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Bizcloud",
+  "license": "ISC",
+  "dependencies": {
+    "aws-sdk": "^2.1163.0",
+    "axios": "^0.27.2",
+    "joi": "^17.6.0",
+    "lodash": "^4.17.21",
+    "lodash.get": "^4.4.2",
+    "moment": "^2.29.3",
+    "moment-timezone": "^0.5.39",
+    "uuid": "^9.0.0",
+    "xmlbuilder2": "^3.0.2"
+  }
+}
