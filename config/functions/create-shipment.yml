@@ -1,0 +1,18 @@
+---
+function:
+  name: omni-ivia-create-shipment-${self:provider.stage}
+  handler: src/create-shipment.handler
+  # provisionedConcurrency: 1
+  # concurrencyAutoscaling: true
+  layers:
+    - { Ref: OmniIviaLayerLambdaLayer }
+  package:
+    include:
+      - "src/create-shipment.js"
+      - "src/shared/**"
+    exclude:
+      - "**/*"
+  events:
+    # - stream: ${ssm:/omni-rt-ivia/${self:provider.stage}/ddb.streamArn~true}
+  environment:
+    # DYNAMO_DB_TABLE: ${ssm:/omni-rt-toyota/${self:provider.stage}/apar-failure/ddb.tableName~true}

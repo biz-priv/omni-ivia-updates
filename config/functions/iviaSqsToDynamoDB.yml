@@ -1,0 +1,31 @@
+---
+function:
+  name: omni-ivia-sqs-to-dynamo-db-${self:provider.stage}
+  handler: src/iviaSqsToDynamoDB.handler
+  memorySize: 1024
+  timeout: 90
+  # provisionedConcurrency: 1
+  # concurrencyAutoscaling: true
+  layers:
+    - { Ref: OmniIviaLayerLambdaLayer }
+  package:
+    include:
+      - "src/iviaSqsToDynamoDB.js"
+      - "src/shared/**"
+    exclude:
+      - "**/*"
+  environment:
+    SHIPMENT_APAR_TABLE: ${ssm:/omni-wt-rt-updates/${self:provider.stage}/shipment-apar/ddb.tableName~true}
+    SHIPMENT_HEADER_TABLE: ${ssm:/omni-wt-rt-updates/${self:provider.stage}/shipment-header/ddb.tableName~true}
+    CONSIGNEE_TABLE: ${ssm:/omni-wt-rt-updates/${self:provider.stage}/consignee/ddb.tableName~true}
+    SHIPPER_TABLE: ${ssm:/omni-wt-rt-updates/${self:provider.stage}/shipper/ddb.tableName~true}
+    SHIPMENT_DESC_TABLE: ${ssm:/omni-wt-rt-updates/${self:provider.stage}/shipment-desc/ddb.tableName~true}
+    INSTRUCTIONS_TABLE: ${ssm:/omni-wt-rt-updates/${self:provider.stage}/instructions/ddb.tableName~true}
+    INSTRUCTIONS_INDEX_KEY_NAME: ${ssm:/omni-wt-rt-updates/${self:provider.stage}/instructions/ddb.orderNoIndex}
+    IVIA_DDB: ${ssm:/omni-ivia/${self:provider.stage}/ddb.tableName}
+  events:
+    - sqs:
+        # arn: ${ssm:/omni-wt-rt-updates/${self:provider.stage}/ivia/sqs.arn~true}
+        arn: arn:aws:sqs:us-east-1:332281781429:omni-rt-ivia-dev
+        batchSize: 10
+        functionResponseType: ReportBatchItemFailures
