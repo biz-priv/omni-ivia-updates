@@ -79,7 +79,7 @@ function iviaCreateShipment(payload) {
             "error:iviaCreateShipment API",
             JSON.stringify(error?.response?.data?.errors ?? "ivia api error")
           );
-          reject(error?.response?.data?.errors ?? "ivia api error");
+          resolve(error?.response?.data?.errors ?? "ivia api error");
         });
     } catch (error) {
       console.log("error:iviaCreateShipment", error);
@@ -123,7 +123,7 @@ async function iviaSendUpdate(houseBill, shipmentId) {
             "error",
             JSON.stringify(error?.response?.data ?? "ivia api error")
           );
-          reject(error?.response?.data ?? "ivia api error");
+          resolve(error?.response?.data ?? "ivia api error");
         });
     } catch (error) {
       console.log("error:iviaSendUpdate", error);
