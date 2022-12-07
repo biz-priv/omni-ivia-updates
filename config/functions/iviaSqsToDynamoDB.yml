@@ -4,8 +4,8 @@ function:
   handler: src/iviaSqsToDynamoDB.handler
   memorySize: 1024
   timeout: 90
-  # provisionedConcurrency: 1
-  # concurrencyAutoscaling: true
+  provisionedConcurrency: 5
+  concurrencyAutoscaling: true
   layers:
     - { Ref: OmniIviaLayerLambdaLayer }
   package:
@@ -25,7 +25,6 @@ function:
     IVIA_DDB: ${ssm:/omni-ivia/${self:provider.stage}/ddb.tableName}
   events:
     - sqs:
-        # arn: ${ssm:/omni-wt-rt-updates/${self:provider.stage}/ivia/sqs.arn~true}
-        arn: arn:aws:sqs:us-east-1:332281781429:omni-rt-ivia-dev
+        arn: ${ssm:/omni-wt-rt-updates/${self:provider.stage}/ivia/sqs.arn~true}
         batchSize: 10
         functionResponseType: ReportBatchItemFailures

@@ -17,9 +17,7 @@ const SHIPPER_TABLE = process.env.SHIPPER_TABLE;
 const INSTRUCTIONS_TABLE = process.env.INSTRUCTIONS_TABLE;
 const SHIPMENT_DESC_TABLE = process.env.SHIPMENT_DESC_TABLE;
 const INSTRUCTIONS_INDEX_KEY_NAME = process.env.INSTRUCTIONS_INDEX_KEY_NAME;
-// const IVIA_DDB = process.env.IVIA_DDB;
-const IVIA_DDB = "omni-rt-ivia-dev";
-// const INSTRUCTIONS_INDEX_KEY_NAME = "omni-wt-instructions-orderNo-index-dev";
+const IVIA_DDB = process.env.IVIA_DDB;
 
 module.exports.handler = async (event, context, callback) => {
   let sqsEventRecords = [];

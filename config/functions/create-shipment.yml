@@ -2,8 +2,8 @@
 function:
   name: omni-ivia-create-shipment-${self:provider.stage}
   handler: src/create-shipment.handler
-  # provisionedConcurrency: 1
-  # concurrencyAutoscaling: true
+  provisionedConcurrency: 5
+  concurrencyAutoscaling: true
   layers:
     - { Ref: OmniIviaLayerLambdaLayer }
   package:
@@ -15,4 +15,9 @@ function:
   events:
     - stream: arn:aws:dynamodb:us-east-1:332281781429:table/omni-rt-ivia-dev/stream/2022-12-06T19:05:20.641
   environment:
-    # DYNAMO_DB_TABLE: ${ssm:/omni-rt-toyota/${self:provider.stage}/apar-failure/ddb.tableName~true}
+    IVIA_CREATE_SHIPMENT_URL: ${ssm:/omni-ivia/${self:provider.stage}/createShipment/url}
+    IVIA_CREATE_SHIPMENT_TOKEN: ${ssm:/omni-ivia/${self:provider.stage}/createShipment/token}
+    IVIA_XML_UPDATE_URL: ${ssm:/omni-ivia/${self:provider.stage}/createShipment/xmlUpdate/url}
+    IVIA_XML_API_USER_ID: ${ssm:/omni-ivia/${self:provider.stage}/createShipment/xmlUpdate/userId}
+    IVIA_XML_API_PASS: ${ssm:/omni-ivia/${self:provider.stage}/createShipment/xmlUpdate/password}
+    IVIA_RESPONSE_DDB: ${ssm:/omni-rt-toyota/${self:provider.stage}/iviaResponse/ddb.tableName}
