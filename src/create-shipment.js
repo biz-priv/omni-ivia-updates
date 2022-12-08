@@ -9,41 +9,46 @@ const IVIA_CREATE_SHIPMENT_URL = process.env.IVIA_CREATE_SHIPMENT_URL;
 const IVIA_CREATE_SHIPMENT_TOKEN = process.env.IVIA_CREATE_SHIPMENT_TOKEN;
 const IVIA_XML_API_USER_ID = process.env.IVIA_XML_API_USER_ID;
 const IVIA_XML_API_PASS = process.env.IVIA_XML_API_PASS;
-const IVIA_XML_UPDATE_URL = process.env.IVIA_XML_UPDATE_UR;
+const IVIA_XML_UPDATE_URL = process.env.IVIA_XML_UPDATE_URL;
 const IVIA_RESPONSE_DDB = process.env.IVIA_RESPONSE_DDB;
 
 module.exports.handler = async (event, context, callback) => {
   try {
     console.log("event", JSON.stringify(event));
-    const streamRecord = AWS.DynamoDB.Converter.unmarshall(
-      event.Records[0].dynamodb.NewImage
-    );
-    const payload = JSON.parse(streamRecord.data);
-    console.log("payload", payload);
-    const iviaCSRes = await iviaCreateShipment(payload);
-    console.log("iviaCSRes", iviaCSRes);
-    const iviaXmlUpdateRes = await iviaSendUpdate(
-      streamRecord.Housebill,
-      iviaCSRes.shipmentId
-    );
-    console.log("iviaXmlUpdateRes", JSON.stringify(iviaXmlUpdateRes));
-    const resPayload = {
-      id: uuidv4(),
-      payload: streamRecord.data,
-      Housebill: streamRecord.Housebill,
-      shipmentApiRes: JSON.stringify(iviaCSRes),
-      xmlUpdateRes: JSON.stringify(iviaXmlUpdateRes),
-      InsertedTimeStamp: momentTZ
-        .tz("America/Chicago")
-        .format("YYYY:MM:DD HH:mm:ss")
-        .toString(),
-    };
-    console.log("resPayload", resPayload);
-    await putItem(IVIA_RESPONSE_DDB, resPayload);
-    return {};
+    const data = event.Records;
+    for (let index = 0; index < data.length; index++) {
+      const NewImage = data[index].dynamodb.NewImage;
+      const streamRecord = AWS.DynamoDB.Converter.unmarshall(NewImage);
+      const payload = JSON.parse(streamRecord.data);
+      console.log("payload", payload);
+
+      const iviaCSRes = await iviaCreateShipment(payload);
+      console.log("iviaCSRes", iviaCSRes);
+
+      const iviaXmlUpdateRes = await iviaSendUpdate(
+        streamRecord.Housebill,
+        iviaCSRes.shipmentId
+      );
+      console.log("iviaXmlUpdateRes", JSON.stringify(iviaXmlUpdateRes));
+
+      const resPayload = {
+        id: uuidv4(),
+        payload: streamRecord.data,
+        Housebill: streamRecord.Housebill,
+        shipmentApiRes: JSON.stringify(iviaCSRes),
+        xmlUpdateRes: JSON.stringify(iviaXmlUpdateRes),
+        InsertedTimeStamp: momentTZ
+          .tz("America/Chicago")
+          .format("YYYY:MM:DD HH:mm:ss")
+          .toString(),
+      };
+      console.log("resPayload", resPayload);
+      await putItem(IVIA_RESPONSE_DDB, resPayload);
+    }
+    return "success";
   } catch (error) {
     console.error("Error", error);
-    return {};
+    return "error";
   }
 };
 
@@ -54,7 +59,7 @@ function iviaCreateShipment(payload) {
         method: "post",
         url: IVIA_CREATE_SHIPMENT_URL,
         headers: {
-          Authorization: IVIA_CREATE_SHIPMENT_TOKEN,
+          Authorization: "Bearer " + IVIA_CREATE_SHIPMENT_TOKEN,
           "Content-Type": "application/json",
         },
         data: JSON.stringify(payload),
@@ -65,11 +70,8 @@ function iviaCreateShipment(payload) {
           resolve({ shipmentId: response.data });
         })
         .catch(function (error) {
-          console.log(
-            "error:iviaCreateShipment API",
-            JSON.stringify(error?.response?.data?.errors ?? "ivia api error")
-          );
-          resolve(error?.response?.data?.errors ?? "ivia api error");
+          console.log("error:iviaCreateShipment API", error?.response);
+          resolve(error?.response?.data ?? "ivia api error");
         });
     } catch (error) {
       console.log("error:iviaCreateShipment", error);
@@ -94,7 +96,7 @@ async function iviaSendUpdate(houseBill, shipmentId) {
 
       axios(config)
         .then(function (response) {
-          console.log("response", response);
+          console.log("response", response.data);
           const obj = convert(response.data, { format: "object" });
           if (
             obj["soap:Envelope"]["soap:Body"].WriteTrackingNoteResponse
@@ -109,11 +111,8 @@ async function iviaSendUpdate(houseBill, shipmentId) {
           }
         })
         .catch(function (error) {
-          console.log(
-            "error",
-            JSON.stringify(error?.response?.data ?? "ivia api error")
-          );
-          resolve(error?.response?.data ?? "ivia api error");
+          console.log("error", error?.response);
+          resolve(error?.response?.data ?? "ivia SendUpdate error");
         });
     } catch (error) {
       console.log("error:iviaSendUpdate", error);
