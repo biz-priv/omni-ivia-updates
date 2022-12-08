@@ -4,7 +4,6 @@ const moment = require("moment");
 const momentTZ = require("moment-timezone");
 const { prepareBatchFailureObj } = require("./shared/dataHelper");
 const {
-  getItem,
   queryWithPartitionKey,
   queryWithIndex,
   putItem,
@@ -31,9 +30,6 @@ module.exports.handler = async (event, context, callback) => {
       try {
         const sqsItem = sqsEventRecords[index];
         const dynamoData = JSON.parse(sqsItem.body);
-        // const dynamoData = sqsItem.body;
-        // console.log("dynamoData", dynamoData);
-
         //get the primary key
         const { tableList, primaryKeyValue } = getTablesAndPrimaryKey(
           dynamoData.dynamoTableName,
@@ -163,9 +159,6 @@ async function fetchDataFromTables(tableList, primaryKeyValue) {
 
 function mapIviaData(dataSet, shipmentAparData) {
   try {
-    // console.log("dataSet", dataSet);
-    // shipmentHeader,consignee,shipper,shipmentApar always have one value
-
     const shipmentHeader =
       dataSet.shipmentHeader.length > 0 ? dataSet.shipmentHeader[0] : {};
     const consignee = dataSet.consignee.length > 0 ? dataSet.consignee[0] : {};
