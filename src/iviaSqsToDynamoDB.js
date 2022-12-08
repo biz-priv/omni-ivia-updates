@@ -4,7 +4,6 @@ const moment = require("moment");
 const momentTZ = require("moment-timezone");
 const { prepareBatchFailureObj } = require("./shared/dataHelper");
 const {
-  getItem,
   queryWithPartitionKey,
   queryWithIndex,
   putItem,
@@ -17,9 +16,7 @@ const SHIPPER_TABLE = process.env.SHIPPER_TABLE;
 const INSTRUCTIONS_TABLE = process.env.INSTRUCTIONS_TABLE;
 const SHIPMENT_DESC_TABLE = process.env.SHIPMENT_DESC_TABLE;
 const INSTRUCTIONS_INDEX_KEY_NAME = process.env.INSTRUCTIONS_INDEX_KEY_NAME;
-// const IVIA_DDB = process.env.IVIA_DDB;
-const IVIA_DDB = "omni-rt-ivia-dev";
-// const INSTRUCTIONS_INDEX_KEY_NAME = "omni-wt-instructions-orderNo-index-dev";
+const IVIA_DDB = process.env.IVIA_DDB;
 
 module.exports.handler = async (event, context, callback) => {
   let sqsEventRecords = [];
@@ -33,9 +30,6 @@ module.exports.handler = async (event, context, callback) => {
       try {
         const sqsItem = sqsEventRecords[index];
         const dynamoData = JSON.parse(sqsItem.body);
-        // const dynamoData = sqsItem.body;
-        // console.log("dynamoData", dynamoData);
-
         //get the primary key
         const { tableList, primaryKeyValue } = getTablesAndPrimaryKey(
           dynamoData.dynamoTableName,
@@ -165,9 +159,6 @@ async function fetchDataFromTables(tableList, primaryKeyValue) {
 
 function mapIviaData(dataSet, shipmentAparData) {
   try {
-    // console.log("dataSet", dataSet);
-    // shipmentHeader,consignee,shipper,shipmentApar always have one value
-
     const shipmentHeader =
       dataSet.shipmentHeader.length > 0 ? dataSet.shipmentHeader[0] : {};
     const consignee = dataSet.consignee.length > 0 ? dataSet.consignee[0] : {};
