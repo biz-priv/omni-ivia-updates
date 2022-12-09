@@ -174,9 +174,9 @@ function mapIviaData(dataSet, shipmentAparData) {
     const iviaPayload = {
       carrierId: 1004451, //hardcode
       refNums: {
-        refNum1: shipmentHeader?.Housebill,
-        refNum2: shipmentHeader?.PK_OrderNo,
-        refNum3: shipmentApar?.ConsolNo,
+        refNum1: shipmentHeader?.Housebill ?? "",
+        refNum2: shipmentHeader?.PK_OrderNo ?? "",
+        refNum3: shipmentApar?.ConsolNo ?? "",
       },
       shipmentDetails: {
         destination: {
@@ -221,7 +221,7 @@ function mapIviaData(dataSet, shipmentAparData) {
               width: shipmentDesc?.Width ? parseInt(shipmentDesc?.Width) : "",
             },
           ],
-          companyName: shipper?.ShipName,
+          companyName: shipper?.ShipName ?? "",
           scheduledDate: getValidDate(shipmentHeader?.ReadyDateTime),
           specialInstructions: getNotes(shipmentInstructions, "P"),
         },
