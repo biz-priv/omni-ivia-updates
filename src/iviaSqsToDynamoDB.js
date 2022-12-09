@@ -172,7 +172,7 @@ function mapIviaData(dataSet, shipmentAparData) {
     const shipmentDesc = getLatestObjByTimeStamp(dataSet.shipmentDesc);
 
     const iviaPayload = {
-      carrierId: 1004451, //hardcode
+      carrierId: 1000025, //hardcode
       refNums: {
         refNum1: shipmentHeader?.Housebill ?? "",
         refNum2: shipmentHeader?.PK_OrderNo ?? "",
