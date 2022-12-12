@@ -1,4 +1,5 @@
 const AWS = require("aws-sdk");
+const Joi = require("joi");
 const { v4: uuidv4 } = require("uuid");
 const momentTZ = require("moment-timezone");
 const { convert } = require("xmlbuilder2");
@@ -17,33 +18,36 @@ module.exports.handler = async (event, context, callback) => {
     console.log("event", JSON.stringify(event));
     const data = event.Records;
     for (let index = 0; index < data.length; index++) {
-      const NewImage = data[index].dynamodb.NewImage;
-      const streamRecord = AWS.DynamoDB.Converter.unmarshall(NewImage);
-      const payload = JSON.parse(streamRecord.data);
-      console.log("payload", payload);
+      try {
+        const NewImage = data[index].dynamodb.NewImage;
+        const streamRecord = AWS.DynamoDB.Converter.unmarshall(NewImage);
+        const payload = JSON.parse(streamRecord.data);
+        validatePayload(payload);
+        const iviaCSRes = await iviaCreateShipment(payload);
+        console.log("iviaCSRes", iviaCSRes);
 
-      const iviaCSRes = await iviaCreateShipment(payload);
-      console.log("iviaCSRes", iviaCSRes);
+        const iviaXmlUpdateRes = await iviaSendUpdate(
+          streamRecord.Housebill,
+          iviaCSRes.shipmentId
+        );
+        console.log("iviaXmlUpdateRes", JSON.stringify(iviaXmlUpdateRes));
 
-      const iviaXmlUpdateRes = await iviaSendUpdate(
-        streamRecord.Housebill,
-        iviaCSRes.shipmentId
-      );
-      console.log("iviaXmlUpdateRes", JSON.stringify(iviaXmlUpdateRes));
-
-      const resPayload = {
-        id: uuidv4(),
-        payload: streamRecord.data,
-        Housebill: streamRecord.Housebill,
-        shipmentApiRes: JSON.stringify(iviaCSRes),
-        xmlUpdateRes: JSON.stringify(iviaXmlUpdateRes),
-        InsertedTimeStamp: momentTZ
-          .tz("America/Chicago")
-          .format("YYYY:MM:DD HH:mm:ss")
-          .toString(),
-      };
-      console.log("resPayload", resPayload);
-      await putItem(IVIA_RESPONSE_DDB, resPayload);
+        const resPayload = {
+          id: uuidv4(),
+          payload: streamRecord.data,
+          Housebill: streamRecord.Housebill,
+          shipmentApiRes: JSON.stringify(iviaCSRes),
+          xmlUpdateRes: JSON.stringify(iviaXmlUpdateRes),
+          InsertedTimeStamp: momentTZ
+            .tz("America/Chicago")
+            .format("YYYY:MM:DD HH:mm:ss")
+            .toString(),
+        };
+        console.log("resPayload", resPayload);
+        await putItem(IVIA_RESPONSE_DDB, resPayload);
+      } catch (error) {
+        console.error("Error:in For loop", error);
+      }
     }
     return "success";
   } catch (error) {
@@ -51,6 +55,71 @@ module.exports.handler = async (event, context, callback) => {
     return "error";
   }
 };
+
+function validatePayload(payload) {
+  try {
+    const joySchema = Joi.object({
+      carrierId: Joi.number().required(), //hardcode
+      refNums: Joi.object({
+        refNum1: Joi.string().allow(""),
+        refNum2: Joi.string().allow(""),
+        refNum3: Joi.string().allow(""),
+      }).required(),
+      shipmentDetails: Joi.object({
+        destination: Joi.object({
+          address: Joi.object({
+            address1: Joi.string().allow(""),
+            city: Joi.string().allow(""),
+            country: Joi.string().required(), // required
+            state: Joi.string().required(), // required
+            zip: Joi.string().required(), // required
+          }).required(),
+          companyName: Joi.string().allow(""),
+          scheduledDate: Joi.number().integer().required(), // shipment header required
+          specialInstructions: Joi.string().allow(""),
+        }).required(),
+        dockHigh: Joi.string().required(), // req [Y / N]
+        hazardous: Joi.string().required(), // required
+        liftGate: Joi.string().required(), // required
+        notes: Joi.string().allow(""),
+        origin: Joi.object({
+          address: Joi.object({
+            address1: Joi.string().allow(""),
+            city: Joi.string().allow(""),
+            country: Joi.string().required(), // required
+            state: Joi.string().allow(""),
+            zip: Joi.string().required(), // required
+          }).required(),
+          cargo: Joi.array()
+            .items(
+              Joi.object({
+                height: Joi.number().integer().allow(""),
+                length: Joi.number().integer().allow(""),
+                packageType: Joi.string().required(), // required
+                quantity: Joi.number().integer().required(), //req
+                stackable: Joi.string().required(), // req [Y / N]
+                turnable: Joi.string().required(), // req [Y / N]
+                weight: Joi.number().integer().required(), //req
+                width: Joi.number().integer().allow(""),
+              }).required()
+            )
+            .required(),
+          companyName: Joi.string().allow(""),
+          scheduledDate: Joi.number().integer().required(), // shipment header required
+          specialInstructions: Joi.string().allow(""),
+        }).required(),
+        unNum: Joi.any().allow("").required(), // accepts only 4 degit number as string
+      }).required(),
+    }).required();
+    const { error, value } = joySchema.validate(payload);
+    if (error) {
+      throw error;
+    }
+  } catch (error) {
+    console.log("error:validatePayload", error);
+    throw error;
+  }
+}
 
 function iviaCreateShipment(payload) {
   return new Promise(async (resolve, reject) => {

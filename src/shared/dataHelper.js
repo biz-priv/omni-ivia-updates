@@ -1,5 +1,5 @@
 const moment = require("moment-timezone");
-const { deleteItem, createOrUpdateDynamo, updateItem } = require("./dynamo");
+const { deleteItem, updateItem } = require("./dynamo");
 
 const mapCsvDataToJson = (data, mapArray) => {
   try {
