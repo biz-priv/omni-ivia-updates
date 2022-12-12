@@ -1,0 +1,23 @@
+---
+function:
+  name: omni-ivia-create-shipment-${self:provider.stage}
+  handler: src/create-shipment.handler
+  provisionedConcurrency: 5
+  concurrencyAutoscaling: true
+  layers:
+    - { Ref: OmniIviaLayerLambdaLayer }
+  package:
+    include:
+      - "src/create-shipment.js"
+      - "src/shared/**"
+    exclude:
+      - "**/*"
+  events:
+    - stream: ${ssm:/omni-ivia/${self:provider.stage}/ivia/ddb.streamArn}
+  environment:
+    IVIA_CREATE_SHIPMENT_URL: ${ssm:/omni-ivia/${self:provider.stage}/createShipment/url}
+    IVIA_CREATE_SHIPMENT_TOKEN: ${ssm:/omni-ivia/${self:provider.stage}/createShipment/token}
+    IVIA_XML_UPDATE_URL: ${ssm:/omni-ivia/${self:provider.stage}/createShipment/xmlUpdate/url}
+    IVIA_XML_API_USER_ID: ${ssm:/omni-ivia/${self:provider.stage}/createShipment/xmlUpdate/userId}
+    IVIA_XML_API_PASS: ${ssm:/omni-ivia/${self:provider.stage}/createShipment/xmlUpdate/password}
+    IVIA_RESPONSE_DDB: ${ssm:/omni-ivia/${self:provider.stage}/iviaResponse/ddb.tableName}
