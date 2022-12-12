@@ -17,6 +17,7 @@ const INSTRUCTIONS_TABLE = process.env.INSTRUCTIONS_TABLE;
 const SHIPMENT_DESC_TABLE = process.env.SHIPMENT_DESC_TABLE;
 const INSTRUCTIONS_INDEX_KEY_NAME = process.env.INSTRUCTIONS_INDEX_KEY_NAME;
 const IVIA_DDB = process.env.IVIA_DDB;
+const IVIA_CARRIER_ID = process.env.IVIA_CARRIER_ID;
 
 module.exports.handler = async (event, context, callback) => {
   let sqsEventRecords = [];
@@ -172,7 +173,7 @@ function mapIviaData(dataSet, shipmentAparData) {
     const shipmentDesc = getLatestObjByTimeStamp(dataSet.shipmentDesc);
 
     const iviaPayload = {
-      carrierId: 1000025, //hardcode TODO need to bring it from ssm param
+      carrierId: IVIA_CARRIER_ID,
       refNums: {
         refNum1: shipmentHeader?.Housebill ?? "",
         refNum2: shipmentHeader?.PK_OrderNo ?? "",
