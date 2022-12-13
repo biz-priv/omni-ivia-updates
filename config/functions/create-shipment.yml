@@ -12,8 +12,8 @@ function:
       - "src/shared/**"
     exclude:
       - "**/*"
-  events:
-    - stream: ${ssm:/omni-ivia/${self:provider.stage}/ivia/ddb.streamArn}
+  # events:
+  #   - stream: ${ssm:/omni-ivia/${self:provider.stage}/ivia/ddb.streamArn}
   environment:
     IVIA_CREATE_SHIPMENT_URL: ${ssm:/omni-ivia/${self:provider.stage}/createShipment/url}
     IVIA_CREATE_SHIPMENT_TOKEN: ${ssm:/omni-ivia/${self:provider.stage}/createShipment/token}
