@@ -17,15 +17,21 @@ module.exports.handler = async (event, context, callback) => {
   try {
     console.log("event", JSON.stringify(event));
     const data = event.Records;
+    // processing all the array of records
     for (let index = 0; index < data.length; index++) {
       try {
         const NewImage = data[index].dynamodb.NewImage;
         const streamRecord = AWS.DynamoDB.Converter.unmarshall(NewImage);
         const payload = JSON.parse(streamRecord.data);
+
+        //validate the payload
         validatePayload(payload);
+
+        //ivia main api
         const iviaCSRes = await iviaCreateShipment(payload);
         console.log("iviaCSRes", iviaCSRes);
 
+        //ivia upadte xml api
         const iviaXmlUpdateRes = await iviaSendUpdate(
           streamRecord.Housebill,
           iviaCSRes.shipmentId
@@ -44,6 +50,8 @@ module.exports.handler = async (event, context, callback) => {
             .toString(),
         };
         console.log("resPayload", resPayload);
+
+        //update all the response to dynamo db
         await putItem(IVIA_RESPONSE_DDB, resPayload);
       } catch (error) {
         console.error("Error:in For loop", error);
@@ -56,6 +64,10 @@ module.exports.handler = async (event, context, callback) => {
   }
 };
 
+/**
+ * validate payload
+ * @param {*} payload
+ */
 function validatePayload(payload) {
   try {
     const joySchema = Joi.object({
@@ -121,6 +133,11 @@ function validatePayload(payload) {
   }
 }
 
+/**
+ * create shipment api
+ * @param {*} payload
+ * @returns
+ */
 function iviaCreateShipment(payload) {
   return new Promise(async (resolve, reject) => {
     try {
@@ -149,6 +166,12 @@ function iviaCreateShipment(payload) {
   });
 }
 
+/**
+ * update xm api
+ * @param {*} houseBill
+ * @param {*} shipmentId
+ * @returns
+ */
 async function iviaSendUpdate(houseBill, shipmentId) {
   return new Promise(async (resolve, reject) => {
     try {
