@@ -330,7 +330,7 @@ function getUnNum(param) {
   try {
     const data = param.filter((e) => e.Hazmat.toUpperCase() === "Y");
     const obj = data.length > 0 ? getLatestObjByTimeStamp(data) : {};
-    const unArr = obj.split(" ");
+    const unArr = obj.description.split(" ");
     if (unArr[0] === "UN") {
       return unArr.filter((e, i) => {
         return (
