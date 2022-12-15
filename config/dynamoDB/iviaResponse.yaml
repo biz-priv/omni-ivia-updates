@@ -6,6 +6,15 @@ IviaResponseDynamoTable:
     AttributeDefinitions:
       - AttributeName: "id"
         AttributeType: "S"
+      - AttributeName: "Housebill"
+        AttributeType: "S"
     KeySchema:
       - AttributeName: "id"
         KeyType: HASH
+    GlobalSecondaryIndexes:
+      - IndexName: omni-ivia-responses-houseBill-index-${self:provider.stage}
+        KeySchema:
+          - AttributeName: "Housebill"
+            KeyType: "HASH"
+        Projection:
+          ProjectionType: "ALL"
