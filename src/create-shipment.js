@@ -30,13 +30,19 @@ module.exports.handler = async (event, context, callback) => {
         //ivia main api
         const iviaCSRes = await iviaCreateShipment(payload);
         console.log("iviaCSRes", iviaCSRes);
-
-        //ivia upadte xml api
-        const iviaXmlUpdateRes = await iviaSendUpdate(
-          streamRecord.Housebill,
-          iviaCSRes.shipmentId
-        );
-        console.log("iviaXmlUpdateRes", JSON.stringify(iviaXmlUpdateRes));
+        let iviaXmlUpdateRes = {};
+        if (
+          iviaCSRes &&
+          iviaCSRes?.shipmentId &&
+          iviaCSRes.shipmentId.length > 0
+        ) {
+          //ivia upadte xml api
+          iviaXmlUpdateRes = await iviaSendUpdate(
+            streamRecord.Housebill,
+            iviaCSRes.shipmentId
+          );
+          console.log("iviaXmlUpdateRes", JSON.stringify(iviaXmlUpdateRes));
+        }
 
         const resPayload = {
           id: uuidv4(),

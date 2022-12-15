@@ -6,8 +6,15 @@ IviaDynamoTable:
     AttributeDefinitions:
       - AttributeName: "id"
         AttributeType: "S"
+      - AttributeName: "Housebill"
+        AttributeType: "S"
     KeySchema:
       - AttributeName: "id"
         KeyType: HASH
+    GlobalSecondaryIndexes:
+      - IndexName: omni-ivia-houseBill-index-${self:provider.stage}
+        KeySchema:
+          - AttributeName: "Housebill"
+            KeyType: "HASH"
     StreamSpecification:
       StreamViewType: NEW_AND_OLD_IMAGES
