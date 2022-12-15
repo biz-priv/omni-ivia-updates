@@ -67,6 +67,12 @@ module.exports.handler = async (event, context, callback) => {
   }
 };
 
+/**
+ * get table list and initial primary key and sort key name
+ * @param {*} tableName
+ * @param {*} dynamoData
+ * @returns
+ */
 function getTablesAndPrimaryKey(tableName, dynamoData) {
   try {
     const tableList = {
@@ -124,6 +130,12 @@ function getTablesAndPrimaryKey(tableName, dynamoData) {
   }
 }
 
+/**
+ * fetch data from the tables
+ * @param {*} tableList
+ * @param {*} primaryKeyValue
+ * @returns
+ */
 async function fetchDataFromTables(tableList, primaryKeyValue) {
   try {
     const data = await Promise.all(
@@ -158,6 +170,11 @@ async function fetchDataFromTables(tableList, primaryKeyValue) {
   }
 }
 
+/**
+ * prepare ivia payload
+ * @param {*} dataSet
+ * @returns
+ */
 function mapIviaData(dataSet, shipmentAparData) {
   try {
     const shipmentHeader =
@@ -239,6 +256,11 @@ function mapIviaData(dataSet, shipmentAparData) {
   }
 }
 
+/**
+ * if we got multiple records from one table then we are taking the latest one.
+ * @param {*} data
+ * @returns
+ */
 function getLatestObjByTimeStamp(data) {
   if (data.length > 1) {
     return data.sort((a, b) => {
@@ -269,6 +291,11 @@ function getValidDate(date) {
   }
 }
 
+/**
+ * get "Y" or "N" based on available lift gate
+ * @param {*} param
+ * @returns
+ */
 function getLiftGate(param) {
   try {
     if (["LIFT", "LIFTD", "LIFTP", "TRLPJ"].includes(param.toUpperCase())) {
@@ -293,11 +320,18 @@ function getNotes(data, type) {
   }
 }
 
+/**
+ * unNum is a number with length 4 and it value should be 0001 to 3600
+ * we populate this field if we have "Hazmat" = "Y"
+ * example  "UN 2234 ST 1234" so we are taking 2234 as unNum
+ * @param {*} param
+ * @returns
+ */
 function getUnNum(param) {
   try {
     const data = param.filter((e) => e.Hazmat.toUpperCase() === "Y");
     const obj = data.length > 0 ? getLatestObjByTimeStamp(data) : {};
-    const unArr = obj.split(" ");
+    const unArr = obj.description.split(" ");
     if (unArr[0] === "UN") {
       return unArr.filter((e, i) => {
         return (
