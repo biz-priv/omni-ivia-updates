@@ -16,5 +16,7 @@ IviaDynamoTable:
         KeySchema:
           - AttributeName: "Housebill"
             KeyType: "HASH"
+        Projection:
+          ProjectionType: "ALL"
     StreamSpecification:
       StreamViewType: NEW_AND_OLD_IMAGES
