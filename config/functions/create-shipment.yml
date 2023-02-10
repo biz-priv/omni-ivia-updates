@@ -1,14 +1,14 @@
 ---
 function:
   name: omni-ivia-create-shipment-${self:provider.stage}
-  handler: src/create-shipment.handler
+  handler: src/v2/create-shipment.handler
   provisionedConcurrency: 5
   concurrencyAutoscaling: true
   layers:
     - { Ref: OmniIviaLayerLambdaLayer }
   package:
     include:
-      - "src/create-shipment.js"
+      - "src/v2/create-shipment.js"
       - "src/shared/**"
     exclude:
       - "**/*"

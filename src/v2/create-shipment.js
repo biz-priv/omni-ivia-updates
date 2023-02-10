@@ -4,7 +4,7 @@ const { v4: uuidv4 } = require("uuid");
 const momentTZ = require("moment-timezone");
 const { convert } = require("xmlbuilder2");
 const axios = require("axios");
-const { putItem } = require("./shared/dynamo");
+const { putItem } = require("../shared/dynamo");
 
 const IVIA_CREATE_SHIPMENT_URL = process.env.IVIA_CREATE_SHIPMENT_URL;
 const IVIA_CREATE_SHIPMENT_TOKEN = process.env.IVIA_CREATE_SHIPMENT_TOKEN;
@@ -81,54 +81,47 @@ function validatePayload(payload) {
       refNums: Joi.object({
         refNum1: Joi.string().allow(""),
         refNum2: Joi.string().allow(""),
-        refNum3: Joi.string().allow(""),
       }).required(),
       shipmentDetails: Joi.object({
-        destination: Joi.object({
-          address: Joi.object({
-            address1: Joi.string().allow(""),
-            city: Joi.string().allow(""),
-            country: Joi.string().required(), // required
-            state: Joi.string().required(), // required
-            zip: Joi.string().required(), // required
-          }).required(),
-          companyName: Joi.string().allow(""),
-          scheduledDate: Joi.number().integer().required(), // shipment header required
-          specialInstructions: Joi.string().allow(""),
-        }).required(),
+        stops: Joi.array()
+          .items(
+            Joi.object({
+              stopType: Joi.string().required(),
+              stopNum: Joi.number().integer().required(),
+              housebills: Joi.array().required(),
+              address: Joi.object({
+                address1: Joi.string().allow(""),
+                city: Joi.string().allow(""),
+                country: Joi.string().required(), // required
+                state: Joi.string().allow(""),
+                zip: Joi.string().required(), // required
+              }).required(),
+              cargo: Joi.array().items(
+                Joi.object({
+                  height: Joi.number().integer().allow(""),
+                  length: Joi.number().integer().allow(""),
+                  packageType: Joi.string().required(), // required
+                  quantity: Joi.number().integer().required(), //req
+                  stackable: Joi.string().required(), // req [Y / N]
+                  turnable: Joi.string().required(), // req [Y / N]
+                  weight: Joi.number().integer().required(), //req
+                  width: Joi.number().integer().allow(""),
+                }).required()
+              ),
+              companyName: Joi.string().allow(""),
+              scheduledDate: Joi.number().integer().required(), // shipment header required
+              specialInstructions: Joi.string().allow(""),
+            }).unknown()
+          )
+          .required(),
         dockHigh: Joi.string().required(), // req [Y / N]
         hazardous: Joi.string().required(), // required
         liftGate: Joi.string().required(), // required
         notes: Joi.string().allow(""),
-        origin: Joi.object({
-          address: Joi.object({
-            address1: Joi.string().allow(""),
-            city: Joi.string().allow(""),
-            country: Joi.string().required(), // required
-            state: Joi.string().allow(""),
-            zip: Joi.string().required(), // required
-          }).required(),
-          cargo: Joi.array()
-            .items(
-              Joi.object({
-                height: Joi.number().integer().allow(""),
-                length: Joi.number().integer().allow(""),
-                packageType: Joi.string().required(), // required
-                quantity: Joi.number().integer().required(), //req
-                stackable: Joi.string().required(), // req [Y / N]
-                turnable: Joi.string().required(), // req [Y / N]
-                weight: Joi.number().integer().required(), //req
-                width: Joi.number().integer().allow(""),
-              }).required()
-            )
-            .required(),
-          companyName: Joi.string().allow(""),
-          scheduledDate: Joi.number().integer().required(), // shipment header required
-          specialInstructions: Joi.string().allow(""),
-        }).required(),
         unNum: Joi.any().allow("").required(), // accepts only 4 degit number as string
       }).required(),
     }).required();
+
     const { error, value } = joySchema.validate(payload);
     if (error) {
       throw error;

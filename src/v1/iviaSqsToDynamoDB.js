@@ -2,12 +2,12 @@ const AWS = require("aws-sdk");
 const { v4: uuidv4 } = require("uuid");
 const moment = require("moment");
 const momentTZ = require("moment-timezone");
-const { prepareBatchFailureObj } = require("./shared/dataHelper");
+const { prepareBatchFailureObj } = require("../shared/dataHelper");
 const {
   queryWithPartitionKey,
   queryWithIndex,
   putItem,
-} = require("./shared/dynamo");
+} = require("../shared/dynamo");
 
 const SHIPMENT_APAR_TABLE = process.env.SHIPMENT_APAR_TABLE;
 const SHIPMENT_HEADER_TABLE = process.env.SHIPMENT_HEADER_TABLE;
