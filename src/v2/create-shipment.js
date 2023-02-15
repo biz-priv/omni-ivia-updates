@@ -31,17 +31,33 @@ module.exports.handler = async (event, context, callback) => {
         const iviaCSRes = await iviaCreateShipment(payload);
         console.log("iviaCSRes", iviaCSRes);
         let iviaXmlUpdateRes = {};
+        let iviaXmlUpdateResArr = [];
+
         if (
           iviaCSRes &&
           iviaCSRes?.shipmentId &&
-          iviaCSRes.shipmentId.length > 0
+          iviaCSRes.shipmentId.toString().length > 0
         ) {
-          //ivia upadte xml api
-          iviaXmlUpdateRes = await iviaSendUpdate(
-            streamRecord.Housebill,
-            iviaCSRes.shipmentId
-          );
-          console.log("iviaXmlUpdateRes", JSON.stringify(iviaXmlUpdateRes));
+          const houseBills = payload.shipmentDetails.stops[0].housebills;
+          console.log("houseBills", houseBills);
+          for (let index = 0; index < houseBills.length; index++) {
+            const element = houseBills[index];
+
+            //ivia upadte xml api
+            iviaXmlUpdateRes = await iviaSendUpdate(
+              element,
+              iviaCSRes.shipmentId
+            );
+            console.log("iviaXmlUpdateRes", JSON.stringify(iviaXmlUpdateRes));
+            iviaXmlUpdateResArr = [
+              ...iviaXmlUpdateResArr,
+              {
+                shipmentId: iviaCSRes.shipmentId,
+                houseBillNo: element,
+                ...iviaXmlUpdateRes,
+              },
+            ];
+          }
         }
 
         const resPayload = {
@@ -49,7 +65,7 @@ module.exports.handler = async (event, context, callback) => {
           payload: streamRecord.data,
           Housebill: streamRecord.Housebill,
           shipmentApiRes: JSON.stringify(iviaCSRes),
-          xmlUpdateRes: JSON.stringify(iviaXmlUpdateRes),
+          xmlUpdateRes: JSON.stringify(iviaXmlUpdateResArr),
           InsertedTimeStamp: momentTZ
             .tz("America/Chicago")
             .format("YYYY:MM:DD HH:mm:ss")
