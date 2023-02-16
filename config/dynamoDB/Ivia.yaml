@@ -8,6 +8,8 @@ IviaDynamoTable:
         AttributeType: "S"
       - AttributeName: "Housebill"
         AttributeType: "S"
+      - AttributeName: "ConsolNo"
+        AttributeType: "S"
     KeySchema:
       - AttributeName: "id"
         KeyType: HASH
