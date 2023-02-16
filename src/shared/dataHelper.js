@@ -72,6 +72,69 @@ function getUnNum(param) {
   }
 }
 
+/**
+ * validate payload
+ * @param {*} payload
+ */
+function validatePayload(payload) {
+  const Joi = require("joi");
+  try {
+    const joySchema = Joi.object({
+      carrierId: Joi.number().required(), //hardcode dev:- 1000025
+      refNums: Joi.object({
+        refNum1: Joi.string().allow(""), //
+        refNum2: Joi.string().allow(""),
+      }).required(),
+      shipmentDetails: Joi.object({
+        stops: Joi.array()
+          .items(
+            Joi.object({
+              stopType: Joi.string().required(), //hardcode P/D
+              stopNum: Joi.number().integer().required(), //hardcode if stopType = P then 0 and if stopType = D then 1
+              housebills: Joi.array().required(), // shipmentHeader.Housebill (1st we take FK_OrderNo from confirmationCost where FK_SeqNo < 9999 and then we filter the Housebill from shipmentHeader table based on orderNo)
+              address: Joi.object({
+                address1: Joi.string().allow(""),
+                city: Joi.string().allow(""),
+                country: Joi.string().required(), // required
+                state: Joi.string().allow(""),
+                zip: Joi.string().required(), // required
+              }).required(),
+              cargo: Joi.array().items(
+                Joi.object({
+                  height: Joi.number().integer().allow(""),
+                  length: Joi.number().integer().allow(""),
+                  packageType: Joi.string().required(), // required
+                  quantity: Joi.number().integer().required(), //req
+                  stackable: Joi.string().required(), // req [Y / N]
+                  turnable: Joi.string().required(), // req [Y / N]
+                  weight: Joi.number().integer().required(), //req
+                  width: Joi.number().integer().allow(""),
+                }).required()
+              ),
+              companyName: Joi.string().allow(""),
+              scheduledDate: Joi.number().integer().required(), // shipment header required
+              specialInstructions: Joi.string().allow(""),
+            }).unknown()
+          )
+          .required(),
+        dockHigh: Joi.string().required(), // req [Y / N] default "N"
+        hazardous: Joi.string().required(), // required  shipmentDesc?.Hazmat
+        liftGate: Joi.string().required(), // required shipmentApar.ChargeCode
+        notes: Joi.string().allow(""),
+        unNum: Joi.any().allow("").required(), // accepts only 4 degit number as string
+      }).required(),
+    }).required();
+
+    const { error, value } = joySchema.validate(payload);
+    if (error) {
+      throw error;
+    }
+  } catch (error) {
+    console.log("error:validatePayload", error);
+    throw error;
+  }
+}
+
 // function getValidDate(date) {
 //   try {
 //     if (moment(date).isValid() && !date.includes("1970")) {
@@ -100,4 +163,5 @@ module.exports = {
   getLatestObjByTimeStamp,
   getLiftGate,
   getUnNum,
+  validatePayload,
 };

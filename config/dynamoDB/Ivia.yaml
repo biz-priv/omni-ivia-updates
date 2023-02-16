@@ -18,5 +18,11 @@ IviaDynamoTable:
             KeyType: "HASH"
         Projection:
           ProjectionType: "ALL"
+      - IndexName: omni-ivia-ConsolNo-index
+        KeySchema:
+          - AttributeName: "ConsolNo"
+            KeyType: "HASH"
+        Projection:
+          ProjectionType: "ALL"
     StreamSpecification:
       StreamViewType: NEW_AND_OLD_IMAGES
