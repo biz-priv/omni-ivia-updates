@@ -66,37 +66,6 @@ const loadMultistopConsole = async (dynamoData, shipmentAparData) => {
     })
     .map((e) => e.Housebill);
 
-  const cargo = shipmentDesc
-    .filter((e) => {
-      const conHeaders = consolStopHeaders
-        .filter(
-          (e) =>
-            e.FK_ConsolNo === shipmentApar.ConsolNo && e.ConsolStopNumber === 0
-        )
-        .map((e) => e.PK_ConsolStopId);
-      const orderNoList = consolStopItems
-        .filter((e) => conHeaders.includes(e.FK_ConsolStopId))
-        .map((e) => e.FK_OrderNo);
-      return orderNoList.includes(e.FK_OrderNo);
-    })
-    .map((e) => {
-      return {
-        packageType:
-          e.FK_PieceTypeId === "BOX"
-            ? "BOX"
-            : e.FK_PieceTypeId === "PLT"
-            ? "PAL"
-            : "PIE",
-        quantity: e?.Pieces ?? "",
-        length: e?.Length ? parseInt(e?.Length) : "",
-        width: e?.Width ? parseInt(e?.Width) : "",
-        height: e?.Height ? parseInt(e?.Height) : "",
-        weight: e?.Weight ? parseInt(e?.Weight) : "",
-        stackable: "Y", // hardcode
-        turnable: "Y", // hardcode
-      };
-    });
-
   const shipmentDetailsStops = consolStopItems
     .filter(
       (e) =>
@@ -112,6 +81,15 @@ const loadMultistopConsole = async (dynamoData, shipmentAparData) => {
 
       //ConsolStopPickupOrDelivery (false = P, true = D)
       if (csh.ConsolStopPickupOrDelivery === "false") {
+        const cargo = getCargoData(
+          shipmentDesc,
+          consolStopHeaders,
+          consolStopItems,
+          0
+        );
+        /**
+         * Notes
+         */
         const sInsNotes = shipmentInstructions
           .filter((e) => e.Type === "P")
           .map((e) => e.Note)
@@ -202,6 +180,46 @@ const loadMultistopConsole = async (dynamoData, shipmentAparData) => {
     await putItem(IVIA_DDB, iviaTableData);
   }
 };
+
+function getCargoData(
+  shipmentDesc,
+  consolStopHeaders,
+  consolStopItems,
+  ConsolStopNumber // 0/1
+) {
+  /**
+   * cargo
+   */
+  return shipmentDesc
+    .filter((e) => {
+      const conHeaders = consolStopHeaders
+        .filter(
+          (e) =>
+            e.FK_ConsolNo === CONSOL_NO &&
+            e.ConsolStopNumber === ConsolStopNumber
+        )
+        .map((e) => e.PK_ConsolStopId);
+      const orderNoList = consolStopItems
+        .filter((e) => conHeaders.includes(e.FK_ConsolStopId))
+        .map((e) => e.FK_OrderNo);
+      return orderNoList.includes(e.FK_OrderNo);
+    })
+    .map((e) => ({
+      packageType:
+        e.FK_PieceTypeId === "BOX"
+          ? "BOX"
+          : e.FK_PieceTypeId === "PLT"
+          ? "PAL"
+          : "PIE",
+      quantity: e?.Pieces ?? "",
+      length: e?.Length ? parseInt(e?.Length) : "",
+      width: e?.Width ? parseInt(e?.Width) : "",
+      height: e?.Height ? parseInt(e?.Height) : "",
+      weight: e?.Weight ? parseInt(e?.Weight) : "",
+      stackable: "Y", // hardcode
+      turnable: "Y", // hardcode
+    }));
+}
 
 /**
  * validate the payload structure and check from dynamodb if the data is sent to ivia priviously.
