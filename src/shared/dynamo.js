@@ -2,6 +2,22 @@ const AWS = require("aws-sdk");
 const get = require("lodash.get");
 var dynamodb = new AWS.DynamoDB.DocumentClient();
 
+async function scanItem(tableName, key, attributesToGet = null) {
+  let params;
+  try {
+    params = {
+      TableName: tableName,
+      Key: key,
+    };
+    if (attributesToGet) params.AttributesToGet = attributesToGet;
+    console.log("params", params);
+    return await dynamodb.scan(params).promise();
+  } catch (e) {
+    console.error("Get Item Error: ", e, "\nGet params: ", params);
+    throw "GetItemError";
+  }
+}
+
 async function getItem(tableName, key, attributesToGet = null) {
   let params;
   try {
@@ -146,6 +162,7 @@ async function queryWithIndex(tableName, index, keys, otherParams = null) {
 }
 
 module.exports = {
+  scanItem,
   getItem,
   putItem,
   updateItem,

@@ -1,10 +1,10 @@
 const AWS = require("aws-sdk");
-const Joi = require("joi");
 const { v4: uuidv4 } = require("uuid");
 const momentTZ = require("moment-timezone");
 const { convert } = require("xmlbuilder2");
 const axios = require("axios");
 const { putItem } = require("../shared/dynamo");
+const { validatePayload } = require("../shared/dataHelper");
 
 const IVIA_CREATE_SHIPMENT_URL = process.env.IVIA_CREATE_SHIPMENT_URL;
 const IVIA_CREATE_SHIPMENT_TOKEN = process.env.IVIA_CREATE_SHIPMENT_TOKEN;
@@ -85,68 +85,6 @@ module.exports.handler = async (event, context, callback) => {
     return "error";
   }
 };
-
-/**
- * validate payload
- * @param {*} payload
- */
-function validatePayload(payload) {
-  try {
-    const joySchema = Joi.object({
-      carrierId: Joi.number().required(), //hardcode
-      refNums: Joi.object({
-        refNum1: Joi.string().allow(""),
-        refNum2: Joi.string().allow(""),
-      }).required(),
-      shipmentDetails: Joi.object({
-        stops: Joi.array()
-          .items(
-            Joi.object({
-              stopType: Joi.string().required(),
-              stopNum: Joi.number().integer().required(),
-              housebills: Joi.array().required(),
-              address: Joi.object({
-                address1: Joi.string().allow(""),
-                city: Joi.string().allow(""),
-                country: Joi.string().required(), // required
-                state: Joi.string().allow(""),
-                zip: Joi.string().required(), // required
-              }).required(),
-              cargo: Joi.array().items(
-                Joi.object({
-                  height: Joi.number().integer().allow(""),
-                  length: Joi.number().integer().allow(""),
-                  packageType: Joi.string().required(), // required
-                  quantity: Joi.number().integer().required(), //req
-                  stackable: Joi.string().required(), // req [Y / N]
-                  turnable: Joi.string().required(), // req [Y / N]
-                  weight: Joi.number().integer().required(), //req
-                  width: Joi.number().integer().allow(""),
-                }).required()
-              ),
-              companyName: Joi.string().allow(""),
-              scheduledDate: Joi.number().integer().required(), // shipment header required
-              specialInstructions: Joi.string().allow(""),
-            }).unknown()
-          )
-          .required(),
-        dockHigh: Joi.string().required(), // req [Y / N]
-        hazardous: Joi.string().required(), // required
-        liftGate: Joi.string().required(), // required
-        notes: Joi.string().allow(""),
-        unNum: Joi.any().allow("").required(), // accepts only 4 degit number as string
-      }).required(),
-    }).required();
-
-    const { error, value } = joySchema.validate(payload);
-    if (error) {
-      throw error;
-    }
-  } catch (error) {
-    console.log("error:validatePayload", error);
-    throw error;
-  }
-}
 
 /**
  * create shipment api
