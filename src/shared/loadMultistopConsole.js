@@ -1,5 +1,10 @@
 const AWS = require("aws-sdk");
-const { getLiftGate, getUnNum, validatePayload } = require("./dataHelper");
+const {
+  getLiftGate,
+  getUnNum,
+  validatePayload,
+  getHazardous,
+} = require("./dataHelper");
 const moment = require("moment");
 const momentTZ = require("moment-timezone");
 const { v4: uuidv4 } = require("uuid");
@@ -147,6 +152,10 @@ const loadMultistopConsole = async (dynamoData, shipmentAparData) => {
     return stopPayload;
   });
 
+  const filteredSH = shipmentDesc.filter((e) =>
+    ORDER_NO_LIST.includes(e.FK_OrderNo)
+  );
+
   const iviaPayload = {
     carrierId: IVIA_CARRIER_ID, // IVIA_CARRIER_ID = 1000025
     refNums: {
@@ -156,9 +165,9 @@ const loadMultistopConsole = async (dynamoData, shipmentAparData) => {
     shipmentDetails: {
       stops: [...pTypeShipmentMap, ...dTypeShipmentMap],
       dockHigh: "N", // req [Y / N]
-      hazardous: "N", //??
-      liftGate: getLiftGate(shipmentApar?.ChargeCode ?? ""), //??
-      unNum: getUnNum(shipmentDesc.shipmentDesc), // accepts only 4 degit number as string
+      hazardous: getHazardous(filteredSH),
+      liftGate: getLiftGate(shipmentApar),
+      unNum: getUnNum(filteredSH), // accepts only 4 degit number as string
     },
   };
   console.log("iviaPayload", JSON.stringify(iviaPayload));
