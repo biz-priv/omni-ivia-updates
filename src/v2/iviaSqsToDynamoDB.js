@@ -221,11 +221,11 @@ module.exports.handler = async (event, context, callback) => {
             await loadMultistopConsole(dynamoData, shipmentAparData);
           } else {
             //exception
-            console.log("exception ");
+            console.log("exception consol> 0");
             throw "exception";
           }
         } else {
-          console.log("exception ");
+          console.log("exception global");
           throw "exception";
         }
       } catch (error) {
