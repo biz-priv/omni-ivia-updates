@@ -52,98 +52,100 @@ const loadMultistopConsole = async (dynamoData, shipmentAparData) => {
   const shipmentInstructions = dataSet.shipmentInstructions.filter((e) =>
     ORDER_NO_LIST.includes(e.FK_OrderNo)
   );
-
-  // const confirmationCost = dataSet.confirmationCost;
-
-  const housebill_delimited = shipmentHeader
-    .filter((e) => {
-      // const conHeaders = consolStopHeaders.map((e) => e.PK_ConsolStopId);
-      // const orderNoList = consolStopItems
-      //   .filter((e) => conHeaders.includes(e.FK_ConsolStopId))
-      //   .map((e) => e.FK_OrderNo);
-      const orderNoList = consolStopItems.map((e) => e.FK_OrderNo);
-      return orderNoList.includes(e.PK_OrderNo);
-    })
-    .map((e) => e.Housebill);
-
-  const shipmentDetailsStops = consolStopItems
-    .filter(
-      (e) =>
-        shipmentApar.Consolidation === "N" &&
-        e.FK_ConsolNo === shipmentApar.ConsolNo
-    )
-    .map((e) => {
-      //for every consolStopItems we will have only one consoleStopHeader data
-      const csh =
-        consolStopHeaders.filter(
-          (e_csh) => e_csh.PK_ConsolStopId === e.FK_ConsolStopId
-        )?.[0] ?? {};
-
-      //ConsolStopPickupOrDelivery (false = P, true = D)
-      if (csh.ConsolStopPickupOrDelivery === "false") {
-        const cargo = getCargoData(
-          shipmentDesc,
-          consolStopHeaders,
-          consolStopItems,
-          0
+  let dataArr = [];
+  consolStopItems.map((e) => {
+    const csh = consolStopHeaders
+      .filter((es) => es.PK_ConsolStopId === e.FK_ConsolStopId)
+      .map((es) => {
+        let houseBillList = shipmentHeader.filter(
+          (esh) => esh.PK_OrderNo === e.FK_OrderNo
         );
-        /**
-         * Notes
-         */
-        const sInsNotes = shipmentInstructions
-          .filter((e) => e.Type === "P")
-          .map((e) => e.Note)
-          .join(" ");
-        return {
-          stopType: "P",
-          stopNum: 0,
-          housebills: housebill_delimited,
-          address: {
-            address1: e.ConsolStopAddress1,
-            city: e.ConsolStopCity,
-            country: e.FK_ConsolStopCountry,
-            state: e.FK_ConsolStopState,
-            zip: e.ConsolStopZip,
-          },
-          companyName: csh?.ConsolStopName,
-          cargo: cargo,
-          scheduledDate: moment(
-            e.ConsolStopDate.split(" ")[0] +
-              " " +
-              e.ConsolStopTimeBegin.split(" ")[1]
-          ).diff("1970-01-01", "ms"),
-          specialInstructions:
-            (e.ConsolStopAddress2 === "" ? "" : e.ConsolStopAddress2 + " ") +
-            sInsNotes,
-        };
-      } else {
-        const sInsNotes = shipmentInstructions
-          .filter((e) => e.Type === "D")
-          .map((e) => e.Note)
-          .join(" ");
-        return {
-          stopType: "D",
-          stopNum: 1,
-          housebills: housebill_delimited,
-          address: {
-            address1: e.ConsolStopAddress1,
-            city: e.ConsolStopCity,
-            country: e.FK_ConsolStopCountry,
-            state: e.FK_ConsolStopState,
-            zip: e.ConsolStopZip,
-          },
-          companyName: csh?.ConsolStopName,
-          scheduledDate: moment(
-            e.ConsolStopDate.split(" ")[0] +
-              " " +
-              e.ConsolStopTimeBegin.split(" ")[1]
-          ).diff("1970-01-01", "ms"),
-          specialInstructions:
-            (e.ConsolStopAddress2 === "" ? "" : e.ConsolStopAddress2 + " ") +
-            sInsNotes,
-        };
-      }
-    });
+        console.log("houseBillList", houseBillList);
+        houseBillList =
+          houseBillList.length > 0 ? houseBillList[0].Housebill : "";
+        return { ...es, ...e, Housebill: houseBillList };
+      });
+    console.log("csh", csh);
+    dataArr = [...dataArr, ...csh];
+  });
+  console.log("dataArr", dataArr);
+
+  const pTypeShipment = groupBy(
+    dataArr.filter((e) => e.ConsolStopPickupOrDelivery === "false"),
+    "ConsolStopNumber"
+  );
+
+  const dTypeShipment = groupBy(
+    dataArr.filter((e) => e.ConsolStopPickupOrDelivery === "true"),
+    "ConsolStopNumber"
+  );
+
+  const pTypeShipmentMap = Object.keys(pTypeShipment).map((e) => {
+    const ele = pTypeShipment[e];
+    const csh = ele[0];
+    const cargo = getCargoData(shipmentDesc, ele);
+    // Notes
+    const sInsNotes = shipmentInstructions
+      .filter((si) => si.Type === "P" && si.FK_OrderNo === csh.FK_OrderNo)
+      .map((ei) => ei.Note)
+      .join(" ");
+
+    const stopPayload = {
+      stopType: "P",
+      stopNum: e,
+      housebills: ele.map((e) => e.Housebill),
+      address: {
+        address1: csh.ConsolStopAddress1,
+        city: csh.ConsolStopCity,
+        country: csh.FK_ConsolStopCountry,
+        state: csh.FK_ConsolStopState,
+        zip: csh.ConsolStopZip,
+      },
+      companyName: csh?.ConsolStopName,
+      cargo: cargo,
+      scheduledDate: moment(
+        csh.ConsolStopDate.split(" ")[0] +
+          " " +
+          csh.ConsolStopTimeBegin.split(" ")[1]
+      ).diff("1970-01-01", "ms"),
+      specialInstructions:
+        (csh.ConsolStopAddress2 === "" ? "" : csh.ConsolStopAddress2 + " ") +
+        sInsNotes,
+    };
+    return stopPayload;
+  });
+
+  const dTypeShipmentMap = Object.keys(dTypeShipment).map((e) => {
+    const ele = dTypeShipment[e];
+    const csh = ele[0];
+    const sInsNotes = shipmentInstructions
+      .filter((si) => si.Type === "D" && si.FK_OrderNo === csh.FK_OrderNo)
+      .map((ei) => ei.Note)
+      .join(" ");
+
+    const stopPayload = {
+      stopType: "D",
+      stopNum: e,
+      housebills: ele.map((e) => e.Housebill),
+      address: {
+        address1: csh.ConsolStopAddress1,
+        city: csh.ConsolStopCity,
+        country: csh.FK_ConsolStopCountry,
+        state: csh.FK_ConsolStopState,
+        zip: csh.ConsolStopZip,
+      },
+      companyName: csh?.ConsolStopName,
+      scheduledDate: moment(
+        csh.ConsolStopDate.split(" ")[0] +
+          " " +
+          csh.ConsolStopTimeBegin.split(" ")[1]
+      ).diff("1970-01-01", "ms"),
+      specialInstructions:
+        (csh.ConsolStopAddress2 === "" ? "" : csh.ConsolStopAddress2 + " ") +
+        sInsNotes,
+    };
+    return stopPayload;
+  });
 
   const iviaPayload = {
     carrierId: IVIA_CARRIER_ID, // IVIA_CARRIER_ID = 1000025
@@ -152,22 +154,26 @@ const loadMultistopConsole = async (dynamoData, shipmentAparData) => {
       refNum2: "", // as query filenumber value is always "" hardcode
     },
     shipmentDetails: {
-      stops: shipmentDetailsStops,
+      stops: [...pTypeShipmentMap, ...dTypeShipmentMap],
       dockHigh: "N", // req [Y / N]
-      hazardous: shipmentDesc?.Hazmat ?? "N",
-      liftGate: getLiftGate(shipmentApar?.ChargeCode ?? ""),
+      hazardous: "N", //??
+      liftGate: getLiftGate(shipmentApar?.ChargeCode ?? ""), //??
       unNum: getUnNum(shipmentDesc.shipmentDesc), // accepts only 4 degit number as string
     },
   };
   console.log("iviaPayload", JSON.stringify(iviaPayload));
 
   const check = await validateAndCheckIfDataSentToIvia(iviaPayload, CONSOL_NO);
+  console.log("check", check);
   if (check) {
     //save to dynamo DB
     const iviaTableData = {
       id: uuidv4(),
       data: JSON.stringify(iviaPayload),
-      Housebill: iviaPayload.shipmentDetails.stops[0].housebills.join(","),
+      Housebill: iviaPayload.shipmentDetails.stops[0]
+        .filter((e) => e.stopType === "P")
+        .map((e) => e.housebills)
+        .join(","),
       ConsolNo: CONSOL_NO,
       FK_OrderNo: ORDER_NO_LIST.join(","),
       payloadType: "loadMultistopConsole",
@@ -181,29 +187,20 @@ const loadMultistopConsole = async (dynamoData, shipmentAparData) => {
   }
 };
 
-function getCargoData(
-  shipmentDesc,
-  consolStopHeaders,
-  consolStopItems,
-  ConsolStopNumber // 0/1
-) {
-  /**
-   * cargo
-   */
+function groupBy(xs, key) {
+  return xs.reduce(function (rv, x) {
+    (rv[x[key]] = rv[x[key]] || []).push(x);
+    return rv;
+  }, {});
+}
+
+/**
+ * cargo
+ */
+function getCargoData(shipmentDesc, ele) {
+  const fkOrderNoList = ele.map((e) => e.FK_OrderNo);
   return shipmentDesc
-    .filter((e) => {
-      const conHeaders = consolStopHeaders
-        .filter(
-          (e) =>
-            e.FK_ConsolNo === CONSOL_NO &&
-            e.ConsolStopNumber === ConsolStopNumber
-        )
-        .map((e) => e.PK_ConsolStopId);
-      const orderNoList = consolStopItems
-        .filter((e) => conHeaders.includes(e.FK_ConsolStopId))
-        .map((e) => e.FK_OrderNo);
-      return orderNoList.includes(e.FK_OrderNo);
-    })
+    .filter((e) => fkOrderNoList.includes(e.FK_OrderNo))
     .map((e) => ({
       packageType:
         e.FK_PieceTypeId === "BOX"
