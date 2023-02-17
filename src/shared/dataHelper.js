@@ -36,12 +36,39 @@ function getLatestObjByTimeStamp(data) {
  */
 function getLiftGate(param) {
   try {
-    if (["LIFT", "LIFTD", "LIFTP", "TRLPJ"].includes(param.toUpperCase())) {
-      console.log("param", param);
-      return "Y";
-    } else {
-      return "N";
+    let val = "N";
+    for (let index = 0; index < param.length; index++) {
+      const element = param[index];
+      if (
+        ["LIFT", "LIFTD", "LIFTP", "TRLPJ"].includes(
+          element?.ChargeCode.toUpperCase()
+        )
+      ) {
+        console.log("param", param);
+        val = "Y";
+      }
     }
+    return val;
+  } catch (error) {
+    return "N";
+  }
+}
+
+/**
+ * getHazardous
+ * @param {*} params
+ * @returns
+ */
+function getHazardous(params) {
+  try {
+    let val = "N";
+    for (let index = 0; index < params.length; index++) {
+      const element = params[index];
+      if (element?.Hazmat === "Y") {
+        val = "Y";
+      }
+    }
+    return val;
   } catch (error) {
     return "N";
   }
@@ -57,7 +84,7 @@ function getLiftGate(param) {
 function getUnNum(param) {
   try {
     const data = param.filter((e) => e.Hazmat.toUpperCase() === "Y");
-    const obj = data.length > 0 ? getLatestObjByTimeStamp(data) : {};
+    const obj = data.length > 0 ? data[0] : {};
     const unArr = obj.description.split(" ");
     if (unArr[0] === "UN") {
       return unArr.filter((e, i) => {
@@ -164,4 +191,5 @@ module.exports = {
   getLiftGate,
   getUnNum,
   validatePayload,
+  getHazardous,
 };
