@@ -153,10 +153,16 @@ const loadP2PConsole = async (dynamoData, shipmentAparData) => {
   const check = await validateAndCheckIfDataSentToIvia(iviaPayload, CONSOL_NO);
   if (check) {
     //save to dynamo DB
+    let houseBillList = [];
+    iviaPayload.shipmentDetails.stops
+      .filter((e) => e.stopType === "P")
+      .map((e) => {
+        houseBillList = [...houseBillList, ...e.housebills];
+      });
     const iviaTableData = {
       id: uuidv4(),
       data: JSON.stringify(iviaPayload),
-      Housebill: iviaPayload.shipmentDetails.stops[0].housebills.join(","),
+      Housebill: houseBillList.join(","),
       ConsolNo: CONSOL_NO,
       FK_OrderNo: shipmentApar.map((e) => e.FK_OrderNo).join(","),
       payloadType: "loadP2PConsole",

@@ -38,7 +38,7 @@ module.exports.handler = async (event, context, callback) => {
           iviaCSRes?.shipmentId &&
           iviaCSRes.shipmentId.toString().length > 0
         ) {
-          const houseBills = payload.shipmentDetails.stops[0].housebills;
+          const houseBills = streamRecord.Housebill.split(",");
           console.log("houseBills", houseBills);
           for (let index = 0; index < houseBills.length; index++) {
             const element = houseBills[index];
