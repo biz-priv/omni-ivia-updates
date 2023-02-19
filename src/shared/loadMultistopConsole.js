@@ -176,13 +176,17 @@ const loadMultistopConsole = async (dynamoData, shipmentAparData) => {
   console.log("check", check);
   if (check) {
     //save to dynamo DB
+    let houseBillList = [];
+    iviaPayload.shipmentDetails.stops
+      .filter((e) => e.stopType === "P")
+      .map((e) => {
+        houseBillList = [...houseBillList, ...e.housebills];
+      });
+
     const iviaTableData = {
       id: uuidv4(),
       data: JSON.stringify(iviaPayload),
-      Housebill: iviaPayload.shipmentDetails.stops[0]
-        .filter((e) => e.stopType === "P")
-        .map((e) => e.housebills)
-        .join(","),
+      Housebill: houseBillList.join(","),
       ConsolNo: CONSOL_NO,
       FK_OrderNo: ORDER_NO_LIST.join(","),
       payloadType: "loadMultistopConsole",
