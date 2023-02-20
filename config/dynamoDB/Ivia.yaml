@@ -8,8 +8,8 @@ IviaDynamoTable:
         AttributeType: "S"
       - AttributeName: "Housebill"
         AttributeType: "S"
-      # - AttributeName: "ConsolNo"
-      #   AttributeType: "S"
+      - AttributeName: "ConsolNo"
+        AttributeType: "S"
     KeySchema:
       - AttributeName: "id"
         KeyType: HASH
@@ -20,11 +20,11 @@ IviaDynamoTable:
             KeyType: "HASH"
         Projection:
           ProjectionType: "ALL"
-      # - IndexName: omni-ivia-ConsolNo-index
-      #   KeySchema:
-      #     - AttributeName: "ConsolNo"
-      #       KeyType: "HASH"
-      #   Projection:
-      #     ProjectionType: "ALL"
+      - IndexName: omni-ivia-ConsolNo-index
+        KeySchema:
+          - AttributeName: "ConsolNo"
+            KeyType: "HASH"
+        Projection:
+          ProjectionType: "ALL"
     StreamSpecification:
       StreamViewType: NEW_AND_OLD_IMAGES

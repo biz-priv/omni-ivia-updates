@@ -64,6 +64,9 @@ module.exports.handler = async (event, context, callback) => {
           id: uuidv4(),
           payload: streamRecord.data,
           Housebill: streamRecord.Housebill,
+          ConsolNo: streamRecord?.ConsolNo ?? "",
+          FK_OrderNo: streamRecord?.FK_OrderNo ?? "",
+          payloadType: streamRecord?.payloadType ?? "",
           shipmentApiRes: JSON.stringify(iviaCSRes),
           xmlUpdateRes: JSON.stringify(iviaXmlUpdateResArr),
           InsertedTimeStamp: momentTZ
