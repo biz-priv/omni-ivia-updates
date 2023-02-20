@@ -8,6 +8,8 @@ IviaResponseDynamoTable:
         AttributeType: "S"
       - AttributeName: "Housebill"
         AttributeType: "S"
+      # - AttributeName: "ConsolNo"
+      #   AttributeType: "S"
     KeySchema:
       - AttributeName: "id"
         KeyType: HASH
@@ -18,3 +20,9 @@ IviaResponseDynamoTable:
             KeyType: "HASH"
         Projection:
           ProjectionType: "ALL"
+      # - IndexName: omni-ivia-ConsolNo-index
+      #   KeySchema:
+      #     - AttributeName: "ConsolNo"
+      #       KeyType: "HASH"
+      #   Projection:
+      #     ProjectionType: "ALL"
