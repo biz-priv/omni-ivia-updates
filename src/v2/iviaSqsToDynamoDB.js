@@ -20,181 +20,70 @@ module.exports.handler = async (event, context, callback) => {
         const sqsItem = sqsEventRecords[index];
         const dynamoData = JSON.parse(sqsItem.body);
         // const dynamoData = {
-        //   ApproximateCreationDateTime: 1673976738,
-        //   Keys: { SeqNo: { S: "9999" }, FK_OrderNo: { S: "184503" } },
+        //   ApproximateCreationDateTime: 1676961662,
+        //   Keys: { SeqNo: { S: "1" }, FK_OrderNo: { S: "4917047" } },
         //   NewImage: {
-        //     FK_OrderNo: {
-        //       S: "184503",
-        //     },
-        //     SeqNo: {
-        //       S: "9999",
-        //     },
-        //     APARCode: {
-        //       S: "V",
-        //     },
-        //     APARStatus: {
-        //       S: "ok123",
-        //     },
-        //     APARType: {
-        //       S: "CLB",
-        //     },
-        //     ChargeCode: {
-        //       S: "",
-        //     },
-        //     Complete: {
-        //       S: "Y",
-        //     },
-        //     Consolidation: {
-        //       S: "Y",
-        //     },
-        //     ConsolNo: {
-        //       S: "184503",
-        //     },
-        //     ConsolShipDateTime: {
-        //       S: "2020-08-11 17:43:00.000",
-        //     },
-        //     Cost: {
-        //       S: "350.00",
-        //     },
-        //     CreateDateTime: {
-        //       S: "2020-08-11 17:44:54.000",
-        //     },
-        //     Currency: {
-        //       S: "USD",
-        //     },
-        //     CustomerInvoiceNo: {
-        //       S: "",
-        //     },
-        //     Description: {
-        //       S: "",
-        //     },
-        //     DueDate: {
-        //       S: "2020-09-12 00:00:00.000",
-        //     },
-        //     Extra: {
-        //       S: "0.00",
-        //     },
-        //     Finalize: {
-        //       S: "Y",
-        //     },
-        //     FinalizedBy: {
-        //       S: "rramos",
-        //     },
-        //     FinalizedDate: {
-        //       S: "2020-09-21 14:25:34.000",
-        //     },
-        //     FinalizedTotal: {
-        //       S: "350.00",
-        //     },
-        //     FK_AccountCode: {
-        //       S: "",
-        //     },
-        //     FK_AirCode: {
-        //       S: "",
-        //     },
-        //     FK_CodeNo: {
-        //       S: "0",
-        //     },
-        //     FK_ConsolStationId: {
-        //       S: "OTR",
-        //     },
-        //     FK_ConsolStatusId: {
-        //       S: "CDE",
-        //     },
-        //     FK_ContainerCode: {
-        //       S: "T",
-        //     },
-        //     FK_CustNo: {
-        //       S: "19197",
-        //     },
-        //     FK_EquipmentCode: {
-        //       S: "SM SPRINT",
-        //     },
-        //     FK_HandlingStation: {
-        //       S: "",
-        //     },
-        //     FK_PaymentTermCode: {
-        //       S: "NULL",
-        //     },
-        //     FK_PaymentTermCode1: {
-        //       S: "NULL",
-        //     },
-        //     FK_ServiceId: {
-        //       S: "HS",
-        //     },
-        //     FK_VendorId: {
-        //       S: "T19262",
-        //     },
-        //     InsertedTimeStamp: {
-        //       S: "2022:12:12 05:07:18",
-        //     },
-        //     InvoiceDate: {
-        //       S: "2020-08-13 00:00:00.000",
-        //     },
-        //     InvoiceNo: {
-        //       S: "4950780A",
-        //     },
-        //     InvoiceSeqNo: {
-        //       S: "0",
-        //     },
-        //     InvPrinted: {
-        //       S: "N",
-        //     },
-        //     InvPrintedDate: {
-        //       S: "1900-01-01 00:00:00.000",
-        //     },
-        //     Override: {
-        //       S: "O",
-        //     },
-        //     PKSeqNo: {
-        //       S: "24595545",
-        //     },
-        //     PostedDateTime: {
-        //       S: "2020-09-22 12:03:50.000",
-        //     },
-        //     Quantity: {
-        //       S: "119.000",
-        //     },
-        //     Rate: {
-        //       S: "0.0000",
-        //     },
-        //     ReadyForInvoice: {
-        //       S: "N",
-        //     },
-        //     ReadyForInvoiceDateTime: {
-        //       S: "1900-01-01 00:00:00.000",
-        //     },
-        //     RefNo: {
-        //       S: "184503",
-        //     },
-        //     Tax: {
-        //       S: "0.00",
-        //     },
-        //     Total: {
-        //       S: "350.00",
-        //     },
-        //     UpdatedBy: {
-        //       S: "vbibi",
-        //     },
-        //     UpdatedOn: {
-        //       S: "2020-09-22 12:03:50.000",
-        //     },
-        //     VendorAmount: {
-        //       S: "0.00",
-        //     },
-        //     VendorCostSeqNo: {
-        //       S: "0",
-        //     },
-        //     Weight: {
-        //       S: "0.0",
-        //     },
+        //     APARCode: { S: "V" },
+        //     Finalize: { S: "N" },
+        //     InvoiceSeqNo: { S: "0" },
+        //     FinalizedDate: { S: "1900-01-01 00:00:00.000" },
+        //     FK_AirCode: { S: "" },
+        //     ReadyForInvoice: { S: "N" },
+        //     FK_VendorId: { S: "T19262" },
+        //     Tax: { S: "0.00" },
+        //     FK_HandlingStation: { S: "" },
+        //     UpdatedBy: { S: "wwaller" },
+        //     APARStatus: { S: "" },
+        //     Currency: { S: "USD" },
+        //     UpdatedOn: { S: "2023-02-20 14:26:17.733" },
+        //     VendorAmount: { S: "0.00" },
+        //     Override: { S: "O" },
+        //     SeqNo: { S: "1" },
+        //     FK_PaymentTermCode: { S: "NULL" },
+        //     FK_ConsolStationId: { S: "" },
+        //     FK_ServiceId: { S: "HS" },
+        //     CustomerInvoiceNo: { S: "" },
+        //     Rate: { S: "0.0000" },
+        //     RefNo: { S: "9200006A" },
+        //     Weight: { S: "0.0" },
+        //     ChargeCode: { S: "" },
+        //     FK_EquipmentCode: { S: "NULL" },
+        //     FK_ContainerCode: { S: "" },
+        //     FK_PaymentTermCode1: { S: "NULL" },
+        //     Description: { S: "" },
+        //     Complete: { S: "N" },
+        //     FK_ConsolStatusId: { S: "" },
+        //     CreateDateTime: { S: "2022-12-29 14:53:33.173" },
+        //     FinalizedBy: { S: "" },
+        //     Cost: { S: "650.00" },
+        //     ConsolShipDateTime: { S: "1900-01-01 00:00:00.000" },
+        //     APARType: { S: "CLB" },
+        //     ConsolNo: { S: "0" },
+        //     ReadyForInvoiceDateTime: { S: "1900-01-01 00:00:00.000" },
+        //     Consolidation: { S: "N" },
+        //     FK_AccountCode: { S: "" },
+        //     FK_CodeNo: { S: "0" },
+        //     FK_CustNo: { S: "19197" },
+        //     VendorCostSeqNo: { S: "0" },
+        //     InvoiceDate: { S: "1900-01-01 00:00:00.000" },
+        //     DueDate: { S: "1900-01-01 00:00:00.000" },
+        //     InvPrinted: { S: "N" },
+        //     FK_OrderNo: { S: "4917047" },
+        //     Quantity: { S: "57.000" },
+        //     InvoiceNo: { S: "" },
+        //     PKSeqNo: { S: "40942588" },
+        //     PostedDateTime: { S: "1900-01-01 00:00:00.000" },
+        //     InvPrintedDate: { S: "1900-01-01 00:00:00.000" },
+        //     Extra: { S: "0.00" },
+        //     FinalizedTotal: { S: "0.00" },
+        //     InsertedTimeStamp: { S: "2023:02:20 14:27:14" },
+        //     Total: { S: "650.00" },
         //   },
-        //   SequenceNumber: "426688000000000028803607296",
-        //   SizeBytes: 991,
+        //   SequenceNumber: "875323600000000000435155807",
+        //   SizeBytes: 1933,
         //   StreamViewType: "NEW_AND_OLD_IMAGES",
         //   dynamoTableName: "omni-wt-rt-shipment-apar-dev",
         // };
-
         if (dynamoData.dynamoTableName !== SHIPMENT_APAR_TABLE) {
           continue;
         }

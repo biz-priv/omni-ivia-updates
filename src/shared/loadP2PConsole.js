@@ -153,7 +153,7 @@ const loadP2PConsole = async (dynamoData, shipmentAparData) => {
   console.log("iviaPayload", JSON.stringify(iviaPayload));
 
   const check = await validateAndCheckIfDataSentToIvia(iviaPayload, CONSOL_NO);
-  if (check) {
+  if (!check) {
     //save to dynamo DB
     let houseBillList = [];
     iviaPayload.shipmentDetails.stops

@@ -176,7 +176,7 @@ const loadMultistopConsole = async (dynamoData, shipmentAparData) => {
 
   const check = await validateAndCheckIfDataSentToIvia(iviaPayload, CONSOL_NO);
   console.log("check", check);
-  if (check) {
+  if (!check) {
     //save to dynamo DB
     let houseBillList = [];
     iviaPayload.shipmentDetails.stops

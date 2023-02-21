@@ -128,7 +128,7 @@ const loadP2PNonConsol = async (dynamoData, shipmentAparData) => {
     };
   });
 
-  const ORDER_NO_LIST = shipmentApar.map((e) => e.FK_OrderNo);
+  const ORDER_NO_LIST = shipmentApar.FK_OrderNo;
   const filteredSH = shipmentDesc.filter((e) =>
     ORDER_NO_LIST.includes(e.FK_OrderNo)
   );
@@ -153,7 +153,7 @@ const loadP2PNonConsol = async (dynamoData, shipmentAparData) => {
     iviaPayload,
     shipmentApar
   );
-  if (check) {
+  if (!check) {
     //save to dynamo DB
     let houseBillList = [];
     iviaPayload.shipmentDetails.stops
@@ -166,7 +166,7 @@ const loadP2PNonConsol = async (dynamoData, shipmentAparData) => {
       data: JSON.stringify(iviaPayload),
       Housebill: houseBillList.join(","),
       ConsolNo: shipmentAparData?.ConsolNo,
-      FK_OrderNo: dataSet.shipmentApar.map((e) => e.FK_OrderNo).join(","),
+      FK_OrderNo: shipmentAparData?.FK_OrderNo,
       payloadType: "loadP2PNonConsol",
       InsertedTimeStamp: momentTZ
         .tz("America/Chicago")
@@ -175,6 +175,8 @@ const loadP2PNonConsol = async (dynamoData, shipmentAparData) => {
     };
     console.log("iviaTableData", iviaTableData);
     await putItem(IVIA_DDB, iviaTableData);
+  } else {
+    console.log("Already sent to IVIA");
   }
 };
 
