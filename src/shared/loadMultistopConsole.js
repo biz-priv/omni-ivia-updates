@@ -26,8 +26,10 @@ const {
   IVIA_DDB,
   IVIA_VENDOR_ID,
   IVIA_CARRIER_ID,
+  STAGE,
 } = process.env;
 
+const globalConsolIndex = "omni-ivia-ConsolNo-index-" + STAGE;
 /**
  * multistop console //non consol p2p // send console no
  */
@@ -278,7 +280,7 @@ function getTablesAndPrimaryKey(tableName) {
         SK: "SeqNo",
         sortName: "shipmentApar",
         indexKeyColumnName: "ConsolNo",
-        indexKeyName: "omni-ivia-ConsolNo-index",
+        indexKeyName: globalConsolIndex,
         type: "INDEX",
       },
       [INSTRUCTIONS_TABLE]: {
@@ -286,7 +288,7 @@ function getTablesAndPrimaryKey(tableName) {
         SK: "",
         sortName: "shipmentInstructions",
         indexKeyColumnName: "ConsolNo",
-        indexKeyName: "omni-ivia-ConsolNo-index",
+        indexKeyName: globalConsolIndex,
         type: "INDEX",
       },
       [SHIPMENT_DESC_TABLE]: {
@@ -294,7 +296,7 @@ function getTablesAndPrimaryKey(tableName) {
         SK: "SeqNo",
         sortName: "shipmentDesc",
         indexKeyColumnName: "ConsolNo",
-        indexKeyName: "omni-ivia-ConsolNo-index",
+        indexKeyName: globalConsolIndex,
         type: "INDEX",
       },
       [CONFIRMATION_COST]: {
@@ -302,7 +304,7 @@ function getTablesAndPrimaryKey(tableName) {
         SK: "FK_OrderNo",
         sortName: "confirmationCost",
         indexKeyColumnName: "ConsolNo",
-        indexKeyName: "omni-ivia-ConsolNo-index",
+        indexKeyName: globalConsolIndex,
         type: "INDEX",
       },
       [CONSOL_STOP_HEADERS]: {
@@ -318,7 +320,7 @@ function getTablesAndPrimaryKey(tableName) {
       //   SK: "FK_ConsolStopId",
       //   sortName: "consolStopItems",
       //   indexKeyColumnName: "ConsolNo",
-      //   indexKeyName: "omni-ivia-ConsolNo-index",
+      //   indexKeyName: globalConsolIndex,
       //   type: "INDEX",
       // },
       // [SHIPMENT_HEADER_TABLE]: {
@@ -326,7 +328,7 @@ function getTablesAndPrimaryKey(tableName) {
       //   SK: "",
       //   sortName: "shipmentHeader",
       //   indexKeyColumnName: "ConsolNo",
-      //   indexKeyName: "omni-ivia-ConsolNo-index",
+      //   indexKeyName: globalConsolIndex,
       //   type: "INDEX",
       // },
     };
