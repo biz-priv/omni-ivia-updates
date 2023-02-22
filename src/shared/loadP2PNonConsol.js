@@ -101,7 +101,7 @@ const loadP2PNonConsol = async (dynamoData, shipmentAparData) => {
       },
       companyName: e.ShipName,
       cargo: cargo,
-      scheduledDate: moment(e.PickupDateTime).diff("1970-01-01", "ms"), // ??
+      scheduledDate: moment(e.PickupDateTime).diff("1970-01-01", "ms"),
       specialInstructions:
         (e.ShipAddress2 === "" ? "" : e.ShipAddress2 + " ") + e.PickupNote,
     };
