@@ -51,12 +51,6 @@ const loadP2PNonConsol = async (dynamoData, shipmentAparData) => {
 
   const shipmentDesc = dataSet.shipmentDesc.filter((e) => e.ConsolNo === "0");
 
-  // exactly one shipfrom/ to address in tbl_confirmation_cost for file number
-  if (confirmationCost.length > 1) {
-    console.log("error: multiple line on confirmationCost");
-    return {};
-  }
-
   const filteredConfirmationCost = confirmationCost.filter((e) => {
     return (
       e.FK_OrderNo === shipmentApar.FK_OrderNo &&
@@ -64,6 +58,12 @@ const loadP2PNonConsol = async (dynamoData, shipmentAparData) => {
       shipmentApar.Consolidation === "N"
     );
   });
+
+  // exactly one shipfrom/ to address in tbl_confirmation_cost for file number
+  if (filteredConfirmationCost.length > 1) {
+    console.log("error: multiple line on confirmationCost");
+    return {};
+  }
 
   const housebill_delimited = shipmentHeader.map((e) => e.Housebill);
 
@@ -103,7 +103,7 @@ const loadP2PNonConsol = async (dynamoData, shipmentAparData) => {
       cargo: cargo,
       scheduledDate: moment(e.PickupDateTime).diff("1970-01-01", "ms"), // ??
       specialInstructions:
-        e.ShipAddress2 === "" ? "" : e.ShipAddress2 + " " + e.PickupNote,
+        (e.ShipAddress2 === "" ? "" : e.ShipAddress2 + " ") + e.PickupNote,
     };
   });
 
@@ -124,7 +124,7 @@ const loadP2PNonConsol = async (dynamoData, shipmentAparData) => {
       companyName: e.ConName,
       scheduledDate: moment(e.DeliveryDateTime).diff("1970-01-01", "ms"), // ??
       specialInstructions:
-        e.ConAddress2 === "" ? "" : e.ConAddress2 + " " + e.DeliveryNote,
+        (e.ConAddress2 === "" ? "" : e.ConAddress2 + " ") + e.DeliveryNote,
     };
   });
 
@@ -136,7 +136,7 @@ const loadP2PNonConsol = async (dynamoData, shipmentAparData) => {
   const iviaPayload = {
     carrierId: IVIA_CARRIER_ID, // IVIA_CARRIER_ID = 1000025
     refNums: {
-      refNum1: shipmentHeader[0].PK_OrderNo ?? "", // tbl_shipmentHeader.pk_orderNo as hwb/ tbl_confirmationCost.consolNo(if it is a consol)
+      refNum1: housebill_delimited[0] ?? "", // tbl_shipmentHeader.pk_orderNo as hwb/ tbl_confirmationCost.consolNo(if it is a consol)
       refNum2: confirmationCost[0].FK_OrderNo ?? "", // tbl_confirmationcost.fk_orderno as filenumber
     },
     shipmentDetails: {

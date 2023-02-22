@@ -2,8 +2,8 @@
 function:
   name: omni-ivia-create-shipment-${self:provider.stage}
   handler: src/v2/create-shipment.handler
-  provisionedConcurrency: 5
-  concurrencyAutoscaling: true
+  # provisionedConcurrency: 5
+  # concurrencyAutoscaling: true
   layers:
     - { Ref: OmniIviaLayerLambdaLayer }
   package:
