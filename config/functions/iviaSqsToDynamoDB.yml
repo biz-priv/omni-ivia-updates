@@ -4,8 +4,8 @@ function:
   handler: src/v2/iviaSqsToDynamoDB.handler
   memorySize: 1024
   timeout: 90
-  provisionedConcurrency: 5
-  concurrencyAutoscaling: true
+  # provisionedConcurrency: 5
+  # concurrencyAutoscaling: true
   layers:
     - { Ref: OmniIviaLayerLambdaLayer }
   package:

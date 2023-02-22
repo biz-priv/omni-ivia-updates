@@ -107,7 +107,7 @@ const loadP2PConsole = async (dynamoData, shipmentAparData) => {
       cargo: cargo,
       scheduledDate: moment(e.PickupDateTime).diff("1970-01-01", "ms"), // ??
       specialInstructions:
-        e.ShipAddress2 === "" ? "" : e.ShipAddress2 + " " + e.PickupNote,
+        (e.ShipAddress2 === "" ? "" : e.ShipAddress2 + " ") + e.PickupNote,
     };
   });
 
@@ -128,7 +128,7 @@ const loadP2PConsole = async (dynamoData, shipmentAparData) => {
       companyName: e.ConName,
       scheduledDate: moment(e.DeliveryDateTime).diff("1970-01-01", "ms"), // ??
       specialInstructions:
-        e.ConAddress2 === "" ? "" : e.ConAddress2 + " " + e.DeliveryNote,
+        (e.ConAddress2 === "" ? "" : e.ConAddress2 + " ") + e.DeliveryNote,
     };
   });
 
