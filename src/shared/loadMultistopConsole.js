@@ -8,7 +8,7 @@ const {
 const moment = require("moment");
 const momentTZ = require("moment-timezone");
 const { v4: uuidv4 } = require("uuid");
-const { queryWithPartitionKey, queryWithIndex } = require("./dynamo");
+const { queryWithPartitionKey, queryWithIndex, putItem } = require("./dynamo");
 const ddb = new AWS.DynamoDB.DocumentClient({
   region: process.env.REGION,
 });
@@ -243,6 +243,11 @@ function validateAndCheckIfDataSentToIvia(payload, ConsolNo) {
   return new Promise(async (resolve, reject) => {
     try {
       validatePayload(payload);
+    } catch (error) {
+      console.log("payload validation error", error);
+      resolve(true);
+    }
+    try {
       const params = {
         TableName: IVIA_DDB,
         IndexName: "omni-ivia-ConsolNo-index",

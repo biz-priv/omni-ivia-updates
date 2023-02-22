@@ -184,6 +184,11 @@ function validateAndCheckIfDataSentToIvia(payload, shipmentApar) {
   return new Promise(async (resolve, reject) => {
     try {
       validatePayload(payload);
+    } catch (error) {
+      console.log("payload validation error", error);
+      resolve(true);
+    }
+    try {
       const params = {
         TableName: IVIA_DDB,
         IndexName: "omni-ivia-ConsolNo-index",
