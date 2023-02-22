@@ -312,7 +312,7 @@ function getTablesAndPrimaryKey(tableName) {
         SK: "FK_ConsolStopId",
         sortName: "consolStopHeaders",
         indexKeyColumnName: "FK_ConsolNo",
-        indexKeyName: "omni-ivia-FK_ConsolNo-index" + STAGE,
+        indexKeyName: "omni-ivia-FK_ConsolNo-index-" + STAGE,
         type: "INDEX",
       },
       // [CONSOL_STOP_ITEMS]: {
