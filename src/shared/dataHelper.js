@@ -117,8 +117,8 @@ function validatePayload(payload) {
           .items(
             Joi.object({
               stopType: Joi.string().required(), //hardcode P/D
-              stopNum: Joi.number().integer().required(), //hardcode if stopType = P then 0 and if stopType = D then 1
-              housebills: Joi.array().required(), // shipmentHeader.Housebill (1st we take FK_OrderNo from confirmationCost where FK_SeqNo < 9999 and then we filter the Housebill from shipmentHeader table based on orderNo)
+              stopNum: Joi.number().integer().required(),
+              housebills: Joi.array().min(1).required(),
               address: Joi.object({
                 address1: Joi.string().allow(""),
                 city: Joi.string().allow(""),
@@ -162,6 +162,17 @@ function validatePayload(payload) {
   }
 }
 
+function getGMTDiff(dateTime) {
+  const momentTZ = require("moment-timezone");
+  const dateArr = dateTime.split(" ");
+  const dateStr =
+    dateArr[0] +
+    "T" +
+    (dateArr[1].length > 0 ? dateArr[1] : "00:00:00") +
+    "-06:00";
+  return momentTZ(dateStr).tz("Etc/GMT").diff("1970-01-01", "ms");
+}
+
 // function getValidDate(date) {
 //   try {
 //     if (moment(date).isValid() && !date.includes("1970")) {
@@ -192,4 +203,5 @@ module.exports = {
   getUnNum,
   validatePayload,
   getHazardous,
+  getGMTDiff,
 };

@@ -4,6 +4,7 @@ const {
   getUnNum,
   validatePayload,
   getHazardous,
+  getGMTDiff,
 } = require("./dataHelper");
 const moment = require("moment");
 const momentTZ = require("moment-timezone");
@@ -34,42 +35,17 @@ const globalConsolIndex = "omni-ivia-ConsolNo-index-" + STAGE;
  */
 const loadP2PConsole = async (dynamoData, shipmentAparData) => {
   console.log("loadP2PConsole");
-
   const CONSOL_NO = shipmentAparData.ConsolNo;
 
-  const tableList = getTablesAndPrimaryKey(dynamoData);
-  const dataSet = await fetchDataFromTables(tableList, CONSOL_NO);
+  const dataSet = await fetchDataFromTablesList(CONSOL_NO);
   console.log("dataSet", JSON.stringify(dataSet));
 
-  const shipmentApar = dataSet.shipmentApar.filter(
-    (e) => e.Consolidation === "N"
-  );
+  const shipmentApar = dataSet.shipmentApar;
   const confirmationCost = dataSet.confirmationCost;
-  // if (confirmationCost.length === 1) {
-  // }
   const shipmentHeader = dataSet.shipmentHeader;
-  const shipmentDesc = dataSet.shipmentDesc.filter((e) =>
-    shipmentApar.map((sa) => sa.FK_OrderNo).includes(e.FK_OrderNo)
-  );
+  const shipmentDesc = dataSet.shipmentDesc;
 
-  const filteredConfirmationCost = confirmationCost.filter((e) => {
-    const data = shipmentApar.filter(
-      (sa) => sa.FK_OrderNo === e.FK_OrderNo && e.FK_SeqNo === sa.SeqNo
-    );
-    return data.length > 0;
-  });
-  console.log("filteredConfirmationCost", filteredConfirmationCost);
-
-  const filteredOrderNoList = JSON.parse(
-    JSON.stringify(filteredConfirmationCost)
-  )
-    .filter((e) => e.FK_SeqNo < 9999)
-    .map((e) => e.FK_OrderNo);
-  console.log("filteredOrderNoList***", filteredOrderNoList);
-
-  const housebill_delimited = shipmentHeader
-    .filter((e) => filteredOrderNoList.includes(e.PK_OrderNo))
-    .map((e) => e.Housebill);
+  const housebill_delimited = shipmentHeader.map((e) => e.Housebill);
 
   const cargo = shipmentDesc.map((e) => {
     return {
@@ -89,53 +65,46 @@ const loadP2PConsole = async (dynamoData, shipmentAparData) => {
     };
   });
 
-  const pStopTypeData = JSON.parse(
-    JSON.stringify(filteredConfirmationCost)
-  ).map((e) => {
-    return {
-      stopType: "P",
-      stopNum: 0,
-      housebills: housebill_delimited,
-      address: {
-        address1: e.ShipAddress1,
-        city: e.ShipCity,
-        country: e.FK_ShipCountry,
-        state: e.FK_ShipState,
-        zip: e.ShipZip,
-      },
-      companyName: e.ShipName,
-      cargo: cargo,
-      scheduledDate: moment(e.PickupDateTime).diff("1970-01-01", "ms"), // ??
-      specialInstructions:
-        (e.ShipAddress2 === "" ? "" : e.ShipAddress2 + " ") + e.PickupNote,
-    };
-  });
+  const pStopTypeData = {
+    stopType: "P",
+    stopNum: 0,
+    housebills: housebill_delimited,
+    address: {
+      address1: confirmationCost[0].ShipAddress1,
+      city: confirmationCost[0].ShipCity,
+      country: confirmationCost[0].FK_ShipCountry,
+      state: confirmationCost[0].FK_ShipState,
+      zip: confirmationCost[0].ShipZip,
+    },
+    companyName: confirmationCost[0].ShipName,
+    cargo: cargo,
+    scheduledDate: getGMTDiff(confirmationCost[0].PickupDateTime),
+    specialInstructions:
+      (confirmationCost[0].ShipAddress2 === ""
+        ? ""
+        : confirmationCost[0].ShipAddress2 + " ") +
+      confirmationCost[0].PickupNote,
+  };
+  const dStopTypeData = {
+    stopType: "D",
+    stopNum: 1,
+    housebills: housebill_delimited,
+    address: {
+      address1: confirmationCost[0].ConAddress1,
+      city: confirmationCost[0].ConCity,
+      country: confirmationCost[0].FK_ConCountry,
+      state: confirmationCost[0].FK_ConState,
+      zip: confirmationCost[0].ConZip,
+    },
+    companyName: confirmationCost[0].ConName,
+    scheduledDate: getGMTDiff(confirmationCost[0].DeliveryDateTime),
+    specialInstructions:
+      (confirmationCost[0].ConAddress2 === ""
+        ? ""
+        : confirmationCost[0].ConAddress2 + " ") +
+      confirmationCost[0].DeliveryNote,
+  };
 
-  const dStopTypeData = JSON.parse(
-    JSON.stringify(filteredConfirmationCost)
-  ).map((e) => {
-    return {
-      stopType: "D",
-      stopNum: 1,
-      housebills: housebill_delimited,
-      address: {
-        address1: e.ConAddress1,
-        city: e.ConCity,
-        country: e.FK_ConCountry,
-        state: e.FK_ConState,
-        zip: e.ConZip,
-      },
-      companyName: e.ConName,
-      scheduledDate: moment(e.DeliveryDateTime).diff("1970-01-01", "ms"), // ??
-      specialInstructions:
-        (e.ConAddress2 === "" ? "" : e.ConAddress2 + " ") + e.DeliveryNote,
-    };
-  });
-
-  const ORDER_NO_LIST = shipmentApar.map((e) => e.FK_OrderNo);
-  const filteredSH = shipmentDesc.filter((e) =>
-    ORDER_NO_LIST.includes(e.FK_OrderNo)
-  );
   const iviaPayload = {
     carrierId: IVIA_CARRIER_ID, //IVIA_CARRIER_ID = 1000025
     refNums: {
@@ -143,11 +112,11 @@ const loadP2PConsole = async (dynamoData, shipmentAparData) => {
       refNum2: "", // as query filenumber value is always ""
     },
     shipmentDetails: {
-      stops: [...pStopTypeData, ...dStopTypeData],
+      stops: [pStopTypeData, dStopTypeData],
       dockHigh: "N", // req [Y / N]
-      hazardous: getHazardous(filteredSH),
+      hazardous: getHazardous(shipmentDesc),
       liftGate: getLiftGate(shipmentApar),
-      unNum: getUnNum(filteredSH), // accepts only 4 degit number as string
+      unNum: getUnNum(shipmentDesc), // accepts only 4 degit number as string
     },
   };
   console.log("iviaPayload", JSON.stringify(iviaPayload));
@@ -177,6 +146,92 @@ const loadP2PConsole = async (dynamoData, shipmentAparData) => {
     await putItem(IVIA_DDB, iviaTableData);
   }
 };
+
+async function fetchDataFromTablesList(CONSOL_NO) {
+  try {
+    /**
+     * shipment apar
+     */
+    const sapparams = {
+      TableName: SHIPMENT_APAR_TABLE,
+      IndexName: globalConsolIndex,
+      KeyConditionExpression: "ConsolNo = :ConsolNo",
+      FilterExpression:
+        "FK_VendorId = :FK_VendorId and Consolidation = :Consolidation",
+      ExpressionAttributeValues: {
+        ":ConsolNo": CONSOL_NO.toString(),
+        ":FK_VendorId": IVIA_VENDOR_ID.toString(),
+        ":Consolidation": "N",
+      },
+    };
+
+    let shipmentApar = await ddb.query(sapparams).promise();
+    shipmentApar = shipmentApar.Items;
+
+    shipmentApar = shipmentApar.filter((e) =>
+      ["HS", "TL"].includes(e.FK_ServiceId)
+    );
+    let confirmationCost = [],
+      shipmentDesc = [],
+      shipmentHeader = [];
+    for (let index = 0; index < shipmentApar.length; index++) {
+      const element = shipmentApar[index];
+      /**
+       * confirmationCost
+       */
+      const ccparams = {
+        TableName: CONFIRMATION_COST,
+        IndexName: CONFIRMATION_COST_INDEX_KEY_NAME,
+        KeyConditionExpression: "FK_OrderNo = :FK_OrderNo",
+        FilterExpression: "FK_SeqNo = :FK_SeqNo",
+        ExpressionAttributeValues: {
+          ":FK_OrderNo": element.FK_OrderNo.toString(),
+          ":FK_SeqNo": element.SeqNo.toString(),
+        },
+      };
+      let cc = await ddb.query(ccparams).promise();
+      confirmationCost = [...confirmationCost, ...cc.Items];
+
+      /**
+       * shipmentHeader
+       */
+      if (element.SeqNo < 9999) {
+        const shparams = {
+          TableName: SHIPMENT_HEADER_TABLE,
+          KeyConditionExpression: "PK_OrderNo = :PK_OrderNo",
+          ExpressionAttributeValues: {
+            ":PK_OrderNo": element.FK_OrderNo.toString(),
+          },
+        };
+        let sh = await ddb.query(shparams).promise();
+        shipmentHeader = [...shipmentHeader, ...sh.Items];
+      }
+
+      /**
+       * shipmentDesc
+       */
+      const sdparams = {
+        TableName: SHIPMENT_DESC_TABLE,
+        KeyConditionExpression: "FK_OrderNo = :FK_OrderNo",
+        ExpressionAttributeValues: {
+          ":FK_OrderNo": element.FK_OrderNo.toString(),
+        },
+      };
+      let sd = await ddb.query(sdparams).promise();
+      shipmentDesc = [...shipmentDesc, ...sd.Items];
+    }
+
+    return {
+      shipmentApar,
+      confirmationCost,
+      shipmentDesc,
+      shipmentHeader,
+    };
+  } catch (error) {
+    console.log("error", error);
+    return {};
+  }
+}
 
 /**
  * validate the payload structure and check from dynamodb if the data is sent to ivia priviously.
@@ -213,155 +268,6 @@ function validateAndCheckIfDataSentToIvia(payload, ConsolNo) {
       resolve(false);
     }
   });
-}
-
-/**
- * get table list and initial primary key and sort key name
- * @param {*} tableName
- * @param {*} dynamoData
- * @returns
- */
-function getTablesAndPrimaryKey(tableName) {
-  try {
-    const tableList = {
-      [SHIPMENT_APAR_TABLE]: {
-        PK: "FK_OrderNo",
-        SK: "SeqNo",
-        sortName: "shipmentApar",
-        indexKeyColumnName: "ConsolNo",
-        indexKeyName: globalConsolIndex,
-        type: "INDEX",
-      },
-      [INSTRUCTIONS_TABLE]: {
-        PK: "PK_InstructionNo",
-        SK: "",
-        sortName: "shipmentInstructions",
-        indexKeyColumnName: "ConsolNo",
-        indexKeyName: globalConsolIndex,
-        type: "INDEX",
-      },
-      [SHIPMENT_DESC_TABLE]: {
-        PK: "FK_OrderNo",
-        SK: "SeqNo",
-        sortName: "shipmentDesc",
-        indexKeyColumnName: "ConsolNo",
-        indexKeyName: globalConsolIndex,
-        type: "INDEX",
-      },
-      [CONFIRMATION_COST]: {
-        PK: "PK_ConfirmationNo",
-        SK: "FK_OrderNo",
-        sortName: "confirmationCost",
-        indexKeyColumnName: "ConsolNo",
-        indexKeyName: globalConsolIndex,
-        type: "INDEX",
-      },
-      [CONSOL_STOP_HEADERS]: {
-        PK: "FK_OrderNo",
-        SK: "FK_ConsolStopId",
-        sortName: "consolStopHeaders",
-        indexKeyColumnName: "FK_ConsolNo",
-        indexKeyName: "omni-ivia-FK_ConsolNo-index-" + STAGE,
-        type: "INDEX",
-      },
-      // [CONSOL_STOP_ITEMS]: {
-      //   PK: "FK_OrderNo",
-      //   SK: "FK_ConsolStopId",
-      //   sortName: "consolStopItems",
-      //   indexKeyColumnName: "ConsolNo",
-      //   indexKeyName: globalConsolIndex,
-      //   type: "INDEX",
-      // },
-      // [SHIPMENT_HEADER_TABLE]: {
-      //   PK: "PK_OrderNo",
-      //   SK: "",
-      //   sortName: "shipmentHeader",
-      //   indexKeyColumnName: "ConsolNo",
-      //   indexKeyName: globalConsolIndex,
-      //   type: "INDEX",
-      // },
-    };
-
-    return tableList;
-  } catch (error) {
-    console.info("error:unable to select table", error);
-    console.info("tableName", tableName);
-    throw error;
-  }
-}
-
-/**
- * fetch data from the tables
- * @param {*} tableList
- * @param {*} primaryKeyValue
- * @returns
- */
-async function fetchDataFromTables(tableList, CONSOL_NO) {
-  try {
-    const data = await Promise.all(
-      Object.keys(tableList).map(async (e) => {
-        const tableName = e;
-        const ele = tableList[tableName];
-        let data = [];
-        if (tableName === SHIPMENT_APAR_TABLE) {
-          data = await queryWithIndex(tableName, ele.indexKeyName, {
-            [ele.indexKeyColumnName]: CONSOL_NO,
-          });
-          const params = {
-            TableName: tableName,
-            IndexName: ele.indexKeyName,
-            KeyConditionExpression: "ConsolNo = :ConsolNo",
-            FilterExpression: "FK_VendorId = :FK_VendorId",
-            ExpressionAttributeValues: {
-              ":ConsolNo": CONSOL_NO.toString(),
-              ":FK_VendorId": IVIA_VENDOR_ID.toString(),
-            },
-          };
-          console.log("params", params);
-          data = await ddb.query(params).promise();
-        } else {
-          data = await queryWithIndex(tableName, ele.indexKeyName, {
-            [ele.indexKeyColumnName]: CONSOL_NO.toString(),
-          });
-        }
-        return { [ele.sortName]: data.Items };
-      })
-    );
-    const newObj = {};
-    data.map((e) => {
-      const objKey = Object.keys(e)[0];
-      newObj[objKey] = e[objKey];
-    });
-
-    //fetch consolStopItems
-    let consolStopItemsData = [];
-    for (let index = 0; index < newObj.consolStopHeaders.length; index++) {
-      const element = newObj.consolStopHeaders[index];
-      const data = await queryWithIndex(
-        CONSOL_STOP_ITEMS,
-        "FK_ConsolStopId-index",
-        {
-          FK_ConsolStopId: element.PK_ConsolStopId,
-        }
-      );
-      consolStopItemsData = [...consolStopItemsData, ...data.Items];
-    }
-    newObj["consolStopItems"] = consolStopItemsData;
-
-    //fetch shipmentHeader
-    let shipmentHeaderData = [];
-    for (let index = 0; index < newObj.shipmentApar.length; index++) {
-      const element = newObj.shipmentApar[index];
-      const data = await queryWithPartitionKey(SHIPMENT_HEADER_TABLE, {
-        PK_OrderNo: element.FK_OrderNo,
-      });
-      shipmentHeaderData = [...shipmentHeaderData, ...data.Items];
-    }
-    newObj["shipmentHeader"] = shipmentHeaderData;
-    return newObj;
-  } catch (error) {
-    console.log("error:fetchDataFromTables", error);
-  }
 }
 
 module.exports = { loadP2PConsole };
