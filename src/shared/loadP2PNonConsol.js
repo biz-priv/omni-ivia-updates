@@ -4,6 +4,7 @@ const {
   getUnNum,
   validatePayload,
   getHazardous,
+  getGMTDiff,
 } = require("./dataHelper");
 const moment = require("moment");
 const momentTZ = require("moment-timezone");
@@ -16,13 +17,13 @@ const ddb = new AWS.DynamoDB.DocumentClient({
 const {
   SHIPMENT_APAR_TABLE, //"T19262"
   SHIPMENT_HEADER_TABLE,
-  INSTRUCTIONS_TABLE,
+  // INSTRUCTIONS_TABLE,
   SHIPMENT_DESC_TABLE,
   CONFIRMATION_COST,
   CONSOL_STOP_HEADERS,
-  CONSOL_STOP_ITEMS,
+  // CONSOL_STOP_ITEMS,
   CONFIRMATION_COST_INDEX_KEY_NAME,
-  INSTRUCTIONS_INDEX_KEY_NAME,
+  // INSTRUCTIONS_INDEX_KEY_NAME,
   IVIA_DDB,
   IVIA_VENDOR_ID,
   IVIA_CARRIER_ID,
@@ -101,7 +102,7 @@ const loadP2PNonConsol = async (dynamoData, shipmentAparData) => {
       },
       companyName: e.ShipName,
       cargo: cargo,
-      scheduledDate: moment(e.PickupDateTime).diff("1970-01-01", "ms"),
+      scheduledDate: getGMTDiff(e.PickupDateTime),
       specialInstructions:
         (e.ShipAddress2 === "" ? "" : e.ShipAddress2 + " ") + e.PickupNote,
     };
@@ -122,7 +123,7 @@ const loadP2PNonConsol = async (dynamoData, shipmentAparData) => {
         zip: e.ConZip,
       },
       companyName: e.ConName,
-      scheduledDate: moment(e.DeliveryDateTime).diff("1970-01-01", "ms"), // ??
+      scheduledDate: getGMTDiff(e.DeliveryDateTime),
       specialInstructions:
         (e.ConAddress2 === "" ? "" : e.ConAddress2 + " ") + e.DeliveryNote,
     };
@@ -235,26 +236,6 @@ function getTablesAndPrimaryKey(tableName, dynamoData) {
         sortName: "shipmentHeader",
         type: "PRIMARY_KEY",
       },
-      // [CONSIGNEE_TABLE]: {
-      //   PK: "FK_ConOrderNo",
-      //   SK: "",
-      //   sortName: "consignee",
-      //   type: "PRIMARY_KEY",
-      // },
-      // [SHIPPER_TABLE]: {
-      //   PK: "FK_ShipOrderNo",
-      //   SK: "",
-      //   sortName: "shipper",
-      //   type: "PRIMARY_KEY",
-      // },
-      [INSTRUCTIONS_TABLE]: {
-        PK: "PK_InstructionNo",
-        SK: "",
-        sortName: "shipmentInstructions",
-        indexKeyColumnName: "FK_OrderNo",
-        indexKeyName: INSTRUCTIONS_INDEX_KEY_NAME, //"omni-wt-instructions-orderNo-index-{stage}"
-        type: "INDEX",
-      },
       [SHIPMENT_DESC_TABLE]: {
         PK: "FK_OrderNo",
         SK: "SeqNo",
@@ -268,12 +249,6 @@ function getTablesAndPrimaryKey(tableName, dynamoData) {
         indexKeyColumnName: "FK_OrderNo",
         indexKeyName: CONFIRMATION_COST_INDEX_KEY_NAME, //omni-wt-confirmation-cost-orderNo-index-{stage}
         type: "INDEX",
-      },
-      [CONSOL_STOP_ITEMS]: {
-        PK: "FK_OrderNo",
-        SK: "FK_ConsolStopId",
-        sortName: "consolStopItems",
-        type: "PRIMARY_KEY",
       },
     };
 
@@ -333,16 +308,6 @@ async function fetchDataFromTables(tableList, primaryKeyValue) {
       newObj[objKey] = e[objKey];
     });
 
-    //fetch consolStopHeaders
-    let consolStopHeaderData = [];
-    for (let index = 0; index < newObj.consolStopItems.length; index++) {
-      const element = newObj.consolStopItems[index];
-      const data = await queryWithPartitionKey(CONSOL_STOP_HEADERS, {
-        PK_ConsolStopId: element.FK_ConsolStopId,
-      });
-      consolStopHeaderData = [...consolStopHeaderData, ...data.Items];
-    }
-    newObj["consolStopHeaders"] = consolStopHeaderData;
     return newObj;
   } catch (error) {
     console.log("error:fetchDataFromTables", error);
@@ -354,7 +319,7 @@ module.exports = { loadP2PNonConsol };
 // {
 //   "carrierId": 1000025, //required** hardcode  dev:- 1000025
 //   "refNums": {
-//     "refNum1": "1234", //shipmentHeader.PK_OrderNo
+//     "refNum1": "1234", //shipmentHeader.Housebill
 //     "refNum2": "1234" // hardcode tbl_confirmationcost.fk_orderno
 //   },
 //   "shipmentDetails": {

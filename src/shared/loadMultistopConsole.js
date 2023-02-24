@@ -4,6 +4,7 @@ const {
   getUnNum,
   validatePayload,
   getHazardous,
+  getGMTDiff,
 } = require("./dataHelper");
 const moment = require("moment");
 const momentTZ = require("moment-timezone");
@@ -38,27 +39,21 @@ const loadMultistopConsole = async (dynamoData, shipmentAparData) => {
 
   const CONSOL_NO = shipmentAparData.ConsolNo;
 
-  const tableList = getTablesAndPrimaryKey(dynamoData);
-  const dataSet = await fetchDataFromTables(tableList, CONSOL_NO);
+  const dd = await fetchDataFromTablesList(CONSOL_NO);
+  console.log("dd", JSON.stringify(dd));
+
+  const dataSet = await fetchDataFromTablesList(CONSOL_NO);
   console.log("dataSet", JSON.stringify(dataSet));
 
-  const shipmentApar = dataSet.shipmentApar.filter(
-    (e) => e.Consolidation === "N"
-  );
-
+  const shipmentApar = dataSet.shipmentApar;
   const shipmentHeader = dataSet.shipmentHeader;
   const shipmentDesc = dataSet.shipmentDesc;
+  const consolStopHeaders = dataSet.consolStopHeaders;
+  const consolStopItems = dataSet.consolStopItems;
+  const shipmentInstructions = dataSet.shipmentInstructions;
+
   const ORDER_NO_LIST = shipmentApar.map((e) => e.FK_OrderNo);
 
-  const consolStopItems = dataSet.consolStopItems.filter((e) =>
-    ORDER_NO_LIST.includes(e.FK_OrderNo)
-  );
-  const consolStopHeaders = dataSet.consolStopHeaders.filter((e) =>
-    consolStopItems.map((cs) => cs.FK_ConsolStopId).includes(e.PK_ConsolStopId)
-  );
-  const shipmentInstructions = dataSet.shipmentInstructions.filter((e) =>
-    ORDER_NO_LIST.includes(e.FK_OrderNo)
-  );
   let dataArr = [];
   consolStopItems.map((e) => {
     const csh = consolStopHeaders
@@ -67,15 +62,13 @@ const loadMultistopConsole = async (dynamoData, shipmentAparData) => {
         let houseBillList = shipmentHeader.filter(
           (esh) => esh.PK_OrderNo === e.FK_OrderNo
         );
-        console.log("houseBillList", houseBillList);
         houseBillList =
           houseBillList.length > 0 ? houseBillList[0].Housebill : "";
         return { ...es, ...e, Housebill: houseBillList };
       });
-    console.log("csh", csh);
     dataArr = [...dataArr, ...csh];
   });
-  console.log("dataArr", dataArr);
+  // console.log("dataArr", dataArr);
 
   const pTypeShipment = groupBy(
     dataArr.filter((e) => e.ConsolStopPickupOrDelivery === "false"),
@@ -93,14 +86,17 @@ const loadMultistopConsole = async (dynamoData, shipmentAparData) => {
     const cargo = getCargoData(shipmentDesc, ele);
     // Notes
     const sInsNotes = shipmentInstructions
-      .filter((si) => si.Type === "P" && si.FK_OrderNo === csh.FK_OrderNo)
+      .filter(
+        (si) =>
+          si.Type.toUpperCase() === "P" && si.FK_OrderNo === csh.FK_OrderNo
+      )
       .map((ei) => ei.Note)
       .join(" ");
 
     const stopPayload = {
       stopType: "P",
       stopNum: e,
-      housebills: ele.map((e) => e.Housebill),
+      housebills: [...new Set(ele.map((e) => e.Housebill))],
       address: {
         address1: csh.ConsolStopAddress1,
         city: csh.ConsolStopCity,
@@ -110,11 +106,11 @@ const loadMultistopConsole = async (dynamoData, shipmentAparData) => {
       },
       companyName: csh?.ConsolStopName,
       cargo: cargo,
-      scheduledDate: moment(
+      scheduledDate: getGMTDiff(
         csh.ConsolStopDate.split(" ")[0] +
           " " +
-          csh.ConsolStopTimeBegin.split(" ")[1]
-      ).diff("1970-01-01", "ms"),
+          (csh.ConsolStopTimeBegin.split(" ")?.[1] ?? "")
+      ),
       specialInstructions:
         (csh.ConsolStopAddress2 === "" ? "" : csh.ConsolStopAddress2 + " ") +
         sInsNotes,
@@ -126,14 +122,17 @@ const loadMultistopConsole = async (dynamoData, shipmentAparData) => {
     const ele = dTypeShipment[e];
     const csh = ele[0];
     const sInsNotes = shipmentInstructions
-      .filter((si) => si.Type === "D" && si.FK_OrderNo === csh.FK_OrderNo)
+      .filter(
+        (si) =>
+          si.Type.toUpperCase() === "D" && si.FK_OrderNo === csh.FK_OrderNo
+      )
       .map((ei) => ei.Note)
       .join(" ");
 
     const stopPayload = {
       stopType: "D",
       stopNum: e,
-      housebills: ele.map((e) => e.Housebill),
+      housebills: [...new Set(ele.map((e) => e.Housebill))],
       address: {
         address1: csh.ConsolStopAddress1,
         city: csh.ConsolStopCity,
@@ -142,11 +141,11 @@ const loadMultistopConsole = async (dynamoData, shipmentAparData) => {
         zip: csh.ConsolStopZip,
       },
       companyName: csh?.ConsolStopName,
-      scheduledDate: moment(
-        csh.ConsolStopDate.split(" ")[0] +
+      scheduledDate: getGMTDiff(
+        csh.ConsolStopDate.split(" ")?.[0] +
           " " +
-          csh.ConsolStopTimeBegin.split(" ")[1]
-      ).diff("1970-01-01", "ms"),
+          (csh.ConsolStopTimeBegin.split(" ")?.[1] ?? "")
+      ),
       specialInstructions:
         (csh.ConsolStopAddress2 === "" ? "" : csh.ConsolStopAddress2 + " ") +
         sInsNotes,
@@ -173,7 +172,6 @@ const loadMultistopConsole = async (dynamoData, shipmentAparData) => {
     },
   };
   console.log("iviaPayload", JSON.stringify(iviaPayload));
-
   const check = await validateAndCheckIfDataSentToIvia(iviaPayload, CONSOL_NO);
   console.log("check", check);
   if (!check) {
@@ -272,150 +270,123 @@ function validateAndCheckIfDataSentToIvia(payload, ConsolNo) {
 }
 
 /**
- * get table list and initial primary key and sort key name
- * @param {*} tableName
- * @param {*} dynamoData
- * @returns
- */
-function getTablesAndPrimaryKey(tableName) {
-  try {
-    const tableList = {
-      [SHIPMENT_APAR_TABLE]: {
-        PK: "FK_OrderNo",
-        SK: "SeqNo",
-        sortName: "shipmentApar",
-        indexKeyColumnName: "ConsolNo",
-        indexKeyName: globalConsolIndex,
-        type: "INDEX",
-      },
-      [INSTRUCTIONS_TABLE]: {
-        PK: "PK_InstructionNo",
-        SK: "",
-        sortName: "shipmentInstructions",
-        indexKeyColumnName: "ConsolNo",
-        indexKeyName: globalConsolIndex,
-        type: "INDEX",
-      },
-      [SHIPMENT_DESC_TABLE]: {
-        PK: "FK_OrderNo",
-        SK: "SeqNo",
-        sortName: "shipmentDesc",
-        indexKeyColumnName: "ConsolNo",
-        indexKeyName: globalConsolIndex,
-        type: "INDEX",
-      },
-      [CONFIRMATION_COST]: {
-        PK: "PK_ConfirmationNo",
-        SK: "FK_OrderNo",
-        sortName: "confirmationCost",
-        indexKeyColumnName: "ConsolNo",
-        indexKeyName: globalConsolIndex,
-        type: "INDEX",
-      },
-      [CONSOL_STOP_HEADERS]: {
-        PK: "FK_OrderNo",
-        SK: "FK_ConsolStopId",
-        sortName: "consolStopHeaders",
-        indexKeyColumnName: "FK_ConsolNo",
-        indexKeyName: "omni-ivia-FK_ConsolNo-index-" + STAGE,
-        type: "INDEX",
-      },
-      // [CONSOL_STOP_ITEMS]: {
-      //   PK: "FK_OrderNo",
-      //   SK: "FK_ConsolStopId",
-      //   sortName: "consolStopItems",
-      //   indexKeyColumnName: "ConsolNo",
-      //   indexKeyName: globalConsolIndex,
-      //   type: "INDEX",
-      // },
-      // [SHIPMENT_HEADER_TABLE]: {
-      //   PK: "PK_OrderNo",
-      //   SK: "",
-      //   sortName: "shipmentHeader",
-      //   indexKeyColumnName: "ConsolNo",
-      //   indexKeyName: globalConsolIndex,
-      //   type: "INDEX",
-      // },
-    };
-
-    return tableList;
-  } catch (error) {
-    console.info("error:unable to select table", error);
-    console.info("tableName", tableName);
-    throw error;
-  }
-}
-
-/**
  * fetch data from the tables
  * @param {*} tableList
  * @param {*} primaryKeyValue
  * @returns
  */
-async function fetchDataFromTables(tableList, CONSOL_NO) {
+async function fetchDataFromTablesList(CONSOL_NO) {
   try {
-    const data = await Promise.all(
-      Object.keys(tableList).map(async (e) => {
-        const tableName = e;
-        const ele = tableList[tableName];
-        let data = [];
-        if (tableName === SHIPMENT_APAR_TABLE) {
-          data = await queryWithIndex(tableName, ele.indexKeyName, {
-            [ele.indexKeyColumnName]: CONSOL_NO,
-          });
-          const params = {
-            TableName: tableName,
-            IndexName: ele.indexKeyName,
-            KeyConditionExpression: "ConsolNo = :ConsolNo",
-            FilterExpression: "FK_VendorId = :FK_VendorId",
-            ExpressionAttributeValues: {
-              ":ConsolNo": CONSOL_NO.toString(),
-              ":FK_VendorId": IVIA_VENDOR_ID.toString(),
-            },
-          };
-          data = await ddb.query(params).promise();
-        } else {
-          data = await queryWithIndex(tableName, ele.indexKeyName, {
-            [ele.indexKeyColumnName]: CONSOL_NO.toString(),
-          });
-        }
-        return { [ele.sortName]: data.Items };
-      })
-    );
-    const newObj = {};
-    data.map((e) => {
-      const objKey = Object.keys(e)[0];
-      newObj[objKey] = e[objKey];
-    });
+    /**
+     * shipment apar
+     */
+    const sapparams = {
+      TableName: SHIPMENT_APAR_TABLE,
+      IndexName: globalConsolIndex,
+      KeyConditionExpression: "ConsolNo = :ConsolNo",
+      FilterExpression:
+        "FK_VendorId = :FK_VendorId and Consolidation = :Consolidation and FK_ServiceId = :FK_ServiceId",
+      ExpressionAttributeValues: {
+        ":ConsolNo": CONSOL_NO.toString(),
+        ":FK_VendorId": IVIA_VENDOR_ID.toString(),
+        ":Consolidation": "N",
+        ":FK_ServiceId": "MT",
+      },
+    };
 
-    //fetch consolStopItems
-    let consolStopItemsData = [];
-    for (let index = 0; index < newObj.consolStopHeaders.length; index++) {
-      const element = newObj.consolStopHeaders[index];
-      const data = await queryWithIndex(
-        CONSOL_STOP_ITEMS,
-        "FK_ConsolStopId-index",
-        {
-          FK_ConsolStopId: element.PK_ConsolStopId,
-        }
-      );
-      consolStopItemsData = [...consolStopItemsData, ...data.Items];
-    }
-    newObj["consolStopItems"] = consolStopItemsData;
+    let shipmentApar = await ddb.query(sapparams).promise();
+    shipmentApar = shipmentApar.Items;
 
-    //fetch shipmentHeader
-    let shipmentHeaderData = [];
-    for (let index = 0; index < newObj.shipmentApar.length; index++) {
-      const element = newObj.shipmentApar[index];
-      const data = await queryWithPartitionKey(SHIPMENT_HEADER_TABLE, {
-        PK_OrderNo: element.FK_OrderNo,
-      });
-      shipmentHeaderData = [...shipmentHeaderData, ...data.Items];
+    let shipmentInstructions = [],
+      shipmentHeader = [],
+      shipmentDesc = [],
+      consolStopHeaders = [],
+      consolStopItems = [];
+    for (let index = 0; index < shipmentApar.length; index++) {
+      const element = shipmentApar[index];
+      /**
+       * shipmentInstructions
+       */
+      const iparams = {
+        TableName: INSTRUCTIONS_TABLE,
+        IndexName: INSTRUCTIONS_INDEX_KEY_NAME,
+        KeyConditionExpression: "FK_OrderNo = :FK_OrderNo",
+        ExpressionAttributeValues: {
+          ":FK_OrderNo": element.FK_OrderNo.toString(),
+        },
+      };
+      let ins = await ddb.query(iparams).promise();
+      shipmentInstructions = [...shipmentInstructions, ...ins.Items];
+
+      /**
+       * shipmentHeader
+       */
+      const shparams = {
+        TableName: SHIPMENT_HEADER_TABLE,
+        KeyConditionExpression: "PK_OrderNo = :PK_OrderNo",
+        ExpressionAttributeValues: {
+          ":PK_OrderNo": element.FK_OrderNo.toString(),
+        },
+      };
+      let sh = await ddb.query(shparams).promise();
+      shipmentHeader = [...shipmentHeader, ...sh.Items];
+
+      /**
+       * shipmentDesc
+       */
+      const sdparams = {
+        TableName: SHIPMENT_DESC_TABLE,
+        KeyConditionExpression: "FK_OrderNo = :FK_OrderNo",
+        ExpressionAttributeValues: {
+          ":FK_OrderNo": element.FK_OrderNo.toString(),
+        },
+      };
+      let sd = await ddb.query(sdparams).promise();
+      shipmentDesc = [...shipmentDesc, ...sd.Items];
+
+      /**
+       * consolStopItems
+       */
+      const cstparams = {
+        TableName: CONSOL_STOP_ITEMS,
+        KeyConditionExpression: "FK_OrderNo = :FK_OrderNo",
+        ExpressionAttributeValues: {
+          ":FK_OrderNo": element.FK_OrderNo.toString(),
+        },
+      };
+      let cst = await ddb.query(cstparams).promise();
+      consolStopItems = [...consolStopItems, ...cst.Items];
+
+      /**
+       * consolStopHeader
+       */
+      for (let index = 0; index < consolStopItems.length; index++) {
+        const csitem = consolStopItems[index];
+        const cshparams = {
+          TableName: CONSOL_STOP_HEADERS,
+          KeyConditionExpression: "PK_ConsolStopId = :PK_ConsolStopId",
+          FilterExpression: "FK_ConsolNo = :ConsolNo",
+          ExpressionAttributeValues: {
+            ":PK_ConsolStopId": csitem.FK_ConsolStopId.toString(),
+            ":ConsolNo": CONSOL_NO.toString(),
+          },
+        };
+        let csh = await ddb.query(cshparams).promise();
+        consolStopHeaders = [...consolStopHeaders, ...csh.Items];
+      }
     }
-    newObj["shipmentHeader"] = shipmentHeaderData;
-    return newObj;
+
+    return {
+      shipmentApar,
+      shipmentInstructions,
+      shipmentHeader,
+      shipmentDesc,
+      consolStopHeaders,
+      consolStopItems,
+    };
   } catch (error) {
-    console.log("error:fetchDataFromTables", error);
+    console.log("error", error);
+    return {};
   }
 }
 
