@@ -116,7 +116,7 @@ function validatePayload(payload) {
     const joySchema = Joi.object({
       carrierId: Joi.number().required(), //hardcode dev:- 1000025
       refNums: Joi.object({
-        refNum1: Joi.string().allow(""), //
+        refNum1: Joi.string().required(), //
         refNum2: Joi.string().allow(""),
       }).required(),
       shipmentDetails: Joi.object({
@@ -127,25 +127,25 @@ function validatePayload(payload) {
               stopNum: Joi.number().integer().required(),
               housebills: Joi.array().min(1).required(),
               address: Joi.object({
-                address1: Joi.string().allow(""),
-                city: Joi.string().allow(""),
+                address1: Joi.string().required(),
+                city: Joi.string().required(),
                 country: Joi.string().required(), // required
-                state: Joi.string().allow(""),
+                state: Joi.string().required(),
                 zip: Joi.string().required(), // required
               }).required(),
               cargo: Joi.array().items(
                 Joi.object({
-                  height: Joi.number().integer().allow(""),
-                  length: Joi.number().integer().allow(""),
+                  height: Joi.number().integer().required(),
+                  length: Joi.number().integer().required(),
                   packageType: Joi.string().required(), // required
                   quantity: Joi.number().integer().required(), //req
                   stackable: Joi.string().required(), // req [Y / N]
                   turnable: Joi.string().required(), // req [Y / N]
                   weight: Joi.number().integer().required(), //req
-                  width: Joi.number().integer().allow(""),
+                  width: Joi.number().integer().required(),
                 }).required()
               ),
-              companyName: Joi.string().allow(""),
+              companyName: Joi.string().required(),
               scheduledDate: Joi.number().integer().required(), // shipment header required
               specialInstructions: Joi.string().allow(""),
             }).unknown()
@@ -154,7 +154,6 @@ function validatePayload(payload) {
         dockHigh: Joi.string().required(), // req [Y / N] default "N"
         hazardous: Joi.string().required(), // required  shipmentDesc?.Hazmat
         liftGate: Joi.string().required(), // required shipmentApar.ChargeCode
-        notes: Joi.string().allow(""),
         unNum: Joi.any().allow("").required(), // accepts only 4 degit number as string
       }).required(),
     }).required();
