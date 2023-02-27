@@ -3,8 +3,8 @@ const { v4: uuidv4 } = require("uuid");
 const momentTZ = require("moment-timezone");
 const { convert } = require("xmlbuilder2");
 const axios = require("axios");
-const { putItem } = require("../shared/dynamo");
-const { validatePayload } = require("../shared/dataHelper");
+const { putItem, updateItem } = require("../shared/dynamo");
+const { validatePayload, getStatus } = require("../shared/dataHelper");
 
 const {
   IVIA_DDB,
@@ -119,18 +119,18 @@ function iviaCreateShipment(payload) {
 
       axios(config)
         .then(function (response) {
-          resolve({ shipmentId: response.data, status: "success" });
+          resolve({ shipmentId: response.data, status: getStatus().SUCCESS });
         })
         .catch(function (error) {
           console.log("error:iviaCreateShipment API", error?.response);
           resolve({
-            status: "failed",
+            status: getStatus().FAILED,
             error: error?.response?.data ?? "ivia api error",
           });
         });
     } catch (error) {
       console.log("error:iviaCreateShipment", error);
-      reject({ status: "failed", error });
+      reject({ status: getStatus().FAILED, error });
     }
   });
 }

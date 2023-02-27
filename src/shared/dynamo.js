@@ -52,7 +52,7 @@ async function updateItem(tableName, key, item, operation = "SET") {
   try {
     const [expression, expressionAtts, expressionAttNames] =
       await getUpdateExpressions(item, key, operation);
-    const params = {
+    params = {
       TableName: tableName,
       Key: key,
       UpdateExpression: expression,
