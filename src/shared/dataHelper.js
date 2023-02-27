@@ -85,13 +85,20 @@ function getUnNum(param) {
   try {
     const data = param.filter((e) => e.Hazmat.toUpperCase() === "Y");
     const obj = data.length > 0 ? data[0] : {};
-    const unArr = obj.description.split(" ");
-    if (unArr[0] === "UN") {
-      return unArr.filter((e, i) => {
-        return (
-          i <= 2 && e.length === 4 && parseInt(e) >= 1 && parseInt(e) <= 3600
-        );
-      })[0];
+    const unArr = obj.Description.split(" ");
+    console.log("unArr", unArr);
+
+    if (unArr[0].toUpperCase().includes("UN")) {
+      // return unArr.filter((e, i) => {
+      //   return (
+      //     i <= 2 && e.length === 4 && parseInt(e) >= 1 && parseInt(e) <= 3600
+      //   );
+      // })[0];
+      let unNo = unArr[0];
+      unNo = unNo.slice(2, 6);
+      if (unNo.length === 4 && parseInt(unNo) <= 4000) {
+        return unNo;
+      }
     }
     return "";
   } catch (error) {
@@ -163,14 +170,45 @@ function validatePayload(payload) {
 }
 
 function getGMTDiff(dateTime) {
-  const momentTZ = require("moment-timezone");
-  const dateArr = dateTime.split(" ");
-  const dateStr =
-    dateArr[0] +
-    "T" +
-    (dateArr[1].length > 0 ? dateArr[1] : "00:00:00") +
-    "-06:00";
-  return momentTZ(dateStr).tz("Etc/GMT").diff("1970-01-01", "ms");
+  if (
+    dateTime &&
+    dateTime.length > 1 &&
+    moment(date).isValid() &&
+    !date.includes("1970")
+  ) {
+    const momentTZ = require("moment-timezone");
+    const dateArr = dateTime.split(" ");
+    const dateStr =
+      dateArr[0] +
+      "T" +
+      (dateArr[1].length > 0 ? dateArr[1] : "00:00:00") +
+      "-06:00";
+    return momentTZ(dateStr).tz("Etc/GMT").diff("1970-01-01", "ms");
+  } else {
+    return "";
+  }
+}
+
+/**
+ * creates delay of {sec}
+ * @param {*} sec
+ * @returns
+ */
+function setDelay(sec) {
+  console.log("delay started");
+  return new Promise(async (resolve, reject) => {
+    setTimeout(() => {
+      console.log("delay end");
+      resolve(true);
+    }, sec * 1000);
+  });
+}
+
+function getStatus() {
+  return {
+    SUCCESS: "SUCCESS",
+    FAILED: "FAILED",
+  };
 }
 
 // function getValidDate(date) {
@@ -204,4 +242,6 @@ module.exports = {
   validatePayload,
   getHazardous,
   getGMTDiff,
+  setDelay,
+  getStatus,
 };
