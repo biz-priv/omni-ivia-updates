@@ -23,9 +23,10 @@ const {
   CONFIRMATION_COST_INDEX_KEY_NAME,
   IVIA_DDB,
   IVIA_VENDOR_ID,
-  IVIA_CARRIER_ID,
+  // IVIA_CARRIER_ID,
   STAGE,
 } = process.env;
+const IVIA_CARRIER_ID = "102";
 const globalConsolIndex = "omni-ivia-ConsolNo-index-" + STAGE;
 /**
  * point to point console // send console no

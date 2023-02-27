@@ -8,13 +8,18 @@ const { validatePayload, getStatus } = require("../shared/dataHelper");
 
 const {
   IVIA_DDB,
-  IVIA_CREATE_SHIPMENT_URL,
-  IVIA_CREATE_SHIPMENT_TOKEN,
+  // IVIA_CREATE_SHIPMENT_URL,
+  // IVIA_CREATE_SHIPMENT_TOKEN,
   IVIA_XML_API_USER_ID,
   IVIA_XML_API_PASS,
   IVIA_XML_UPDATE_URL,
   IVIA_RESPONSE_DDB,
 } = process.env;
+
+const IVIA_CREATE_SHIPMENT_URL =
+  "https://api-stage.stage.ivia.us/v2/shipments/uncovered";
+const IVIA_CREATE_SHIPMENT_TOKEN =
+  "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJvY2N1cnJlZF9vbiI6MTY2OTc0MDg5OTk3OSwidXNlcl9pZCI6MzcxMCwib3JnX2lkIjo0MDA5LCJwZXJtaXNzaW9ucyI6W251bGxdLCJzY29wZSI6WyJhcGkiXSwib3Blbl9hcGlfaWQiOiI5NjFlOWY1ZC0xMjA4LTQ5MDUtYmUwMS1hMGIxNTQ5ZDZhYzAiLCJvcGVuX2FwaV91c2VyX2lkIjozNzExLCJleHAiOjI2Njk3NDA4OTgsInJlZ2lvbiI6Ik5BIiwianRpIjoiMTFhOWYzNTQtMjgzNy00OGFkLWJkNjItYzY5ZDk0YTA4YTEyIiwiY2xpZW50X2lkIjoib3Blbi1hcGkifQ.HO3kQ4EKSaDbgPigdytn2s7JndR_uYSDYKC3gZWZDe5e0eKKQWj1K18q9shyD3CXgQn59TwnfNl67F9BwPS5UZ1qgpU6f5MwY2B41QrruJUUrzIJJB1L1-ZDuQJqf05VsVkG5tmBC8oSNZgym9HCCtS0N2YodcC3VhOZreNdyjCHZMX4UsBjc66tWEpoD2y-DjSM_2JVs1fRDjnuUjla_N5Iydez0Pcgl7ZsD20QFlUKK4fqGVOafwLw1eApORmVdfUl11Or2QR5_ovH9plHEud1sb-l7CAa0rKB6f1losIJasxbG2fc3OG0ArSJHxTeZz7_clkxrfRFxFGEaj7z6Q";
 
 module.exports.handler = async (event, context, callback) => {
   try {
