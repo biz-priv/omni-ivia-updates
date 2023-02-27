@@ -102,8 +102,9 @@ const loadP2PNonConsol = async (dynamoData, shipmentAparData) => {
       companyName: e.ShipName,
       cargo: cargo,
       scheduledDate: getGMTDiff(e.PickupDateTime),
-      specialInstructions:
-        (e.ShipAddress2 === "" ? "" : e.ShipAddress2 + " ") + e.PickupNote,
+      specialInstructions: (
+        (e.ShipAddress2 === "" ? "" : e.ShipAddress2 + " ") + e.PickupNote
+      ).slice(0, 200),
     };
   });
 
@@ -123,8 +124,9 @@ const loadP2PNonConsol = async (dynamoData, shipmentAparData) => {
       },
       companyName: e.ConName,
       scheduledDate: getGMTDiff(e.DeliveryDateTime),
-      specialInstructions:
-        (e.ConAddress2 === "" ? "" : e.ConAddress2 + " ") + e.DeliveryNote,
+      specialInstructions: (
+        (e.ConAddress2 === "" ? "" : e.ConAddress2 + " ") + e.DeliveryNote
+      ).slice(0, 200),
     };
   });
 
