@@ -138,6 +138,7 @@ const loadP2PConsole = async (dynamoData, shipmentAparData) => {
         .tz("America/Chicago")
         .format("YYYY:MM:DD HH:mm:ss")
         .toString(),
+      status: getStatus().IN_PROGRESS,
     };
     console.log("iviaTableData", iviaTableData);
     await putItem(IVIA_DDB, iviaTableData);
@@ -252,15 +253,15 @@ function validateAndCheckIfDataSentToIvia(payload, ConsolNo) {
         FilterExpression: "status = :status",
         ExpressionAttributeValues: {
           ":ConsolNo": ConsolNo.toString(),
-          ":status": getStatus().SUCCESS,
+          ":status": getStatus().FAILED,
         },
       };
       const data = await ddb.query(params).promise();
       console.log("data", data.Items.length);
       if (data.Items.length > 0) {
-        resolve(true);
-      } else {
         resolve(false);
+      } else {
+        resolve(true);
       }
     } catch (error) {
       console.log("dynamoError:", error);

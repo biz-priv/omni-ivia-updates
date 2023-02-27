@@ -40,9 +40,6 @@ const loadMultistopConsole = async (dynamoData, shipmentAparData) => {
 
   const CONSOL_NO = shipmentAparData.ConsolNo;
 
-  const dd = await fetchDataFromTablesList(CONSOL_NO);
-  console.log("dd", JSON.stringify(dd));
-
   const dataSet = await fetchDataFromTablesList(CONSOL_NO);
   console.log("dataSet", JSON.stringify(dataSet));
 
@@ -195,6 +192,7 @@ const loadMultistopConsole = async (dynamoData, shipmentAparData) => {
         .tz("America/Chicago")
         .format("YYYY:MM:DD HH:mm:ss")
         .toString(),
+      status: getStatus().IN_PROGRESS,
     };
     console.log("iviaTableData", iviaTableData);
     await putItem(IVIA_DDB, iviaTableData);
@@ -254,16 +252,16 @@ function validateAndCheckIfDataSentToIvia(payload, ConsolNo) {
         FilterExpression: "status = :status",
         ExpressionAttributeValues: {
           ":ConsolNo": ConsolNo.toString(),
-          ":status": getStatus().SUCCESS,
+          ":status": getStatus().FAILED,
         },
       };
       console.log("params", params);
       const data = await ddb.query(params).promise();
       console.log("data", data.Items.length);
       if (data.Items.length > 0) {
-        resolve(true);
-      } else {
         resolve(false);
+      } else {
+        resolve(true);
       }
     } catch (error) {
       console.log("dynamoError:", error);
@@ -288,12 +286,14 @@ async function fetchDataFromTablesList(CONSOL_NO) {
       IndexName: globalConsolIndex,
       KeyConditionExpression: "ConsolNo = :ConsolNo",
       FilterExpression:
-        "FK_VendorId = :FK_VendorId and Consolidation = :Consolidation and FK_ServiceId = :FK_ServiceId",
+        "FK_VendorId = :FK_VendorId and Consolidation = :Consolidation and FK_ServiceId = :FK_ServiceId and SeqNo <> :SeqNo and FK_OrderNo <> :FK_OrderNo",
       ExpressionAttributeValues: {
         ":ConsolNo": CONSOL_NO.toString(),
         ":FK_VendorId": IVIA_VENDOR_ID.toString(),
         ":Consolidation": "N",
         ":FK_ServiceId": "MT",
+        ":SeqNo": "9999",
+        ":FK_OrderNo": CONSOL_NO.toString(),
       },
     };
 

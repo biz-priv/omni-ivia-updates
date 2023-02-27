@@ -170,13 +170,14 @@ function validatePayload(payload) {
 }
 
 function getGMTDiff(dateTime) {
+  const momentTZ = require("moment-timezone");
+  const moment = require("moment");
   if (
     dateTime &&
     dateTime.length > 1 &&
-    moment(date).isValid() &&
-    !date.includes("1970")
+    moment(dateTime).isValid() &&
+    !dateTime.includes("1970")
   ) {
-    const momentTZ = require("moment-timezone");
     const dateArr = dateTime.split(" ");
     const dateStr =
       dateArr[0] +
@@ -208,6 +209,7 @@ function getStatus() {
   return {
     SUCCESS: "SUCCESS",
     FAILED: "FAILED",
+    IN_PROGRESS: "IN_PROGRESS",
   };
 }
 
