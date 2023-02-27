@@ -6,12 +6,15 @@ const axios = require("axios");
 const { putItem } = require("../shared/dynamo");
 const { validatePayload } = require("../shared/dataHelper");
 
-const IVIA_CREATE_SHIPMENT_URL = process.env.IVIA_CREATE_SHIPMENT_URL;
-const IVIA_CREATE_SHIPMENT_TOKEN = process.env.IVIA_CREATE_SHIPMENT_TOKEN;
-const IVIA_XML_API_USER_ID = process.env.IVIA_XML_API_USER_ID;
-const IVIA_XML_API_PASS = process.env.IVIA_XML_API_PASS;
-const IVIA_XML_UPDATE_URL = process.env.IVIA_XML_UPDATE_URL;
-const IVIA_RESPONSE_DDB = process.env.IVIA_RESPONSE_DDB;
+const {
+  IVIA_DDB,
+  IVIA_CREATE_SHIPMENT_URL,
+  IVIA_CREATE_SHIPMENT_TOKEN,
+  IVIA_XML_API_USER_ID,
+  IVIA_XML_API_PASS,
+  IVIA_XML_UPDATE_URL,
+  IVIA_RESPONSE_DDB,
+} = process.env;
 
 module.exports.handler = async (event, context, callback) => {
   try {
@@ -73,11 +76,18 @@ module.exports.handler = async (event, context, callback) => {
             .tz("America/Chicago")
             .format("YYYY:MM:DD HH:mm:ss")
             .toString(),
+          status: iviaCSRes.status,
         };
         console.log("resPayload", resPayload);
 
         //update all the response to dynamo db
         await putItem(IVIA_RESPONSE_DDB, resPayload);
+
+        await updateItem(
+          IVIA_DDB,
+          { id: streamRecord.id },
+          { ...streamRecord, status: iviaCSRes.status }
+        );
       } catch (error) {
         console.error("Error:in For loop", error);
       }
@@ -109,15 +119,18 @@ function iviaCreateShipment(payload) {
 
       axios(config)
         .then(function (response) {
-          resolve({ shipmentId: response.data });
+          resolve({ shipmentId: response.data, status: "success" });
         })
         .catch(function (error) {
           console.log("error:iviaCreateShipment API", error?.response);
-          resolve(error?.response?.data ?? "ivia api error");
+          resolve({
+            status: "failed",
+            error: error?.response?.data ?? "ivia api error",
+          });
         });
     } catch (error) {
       console.log("error:iviaCreateShipment", error);
-      reject(error);
+      reject({ status: "failed", error });
     }
   });
 }

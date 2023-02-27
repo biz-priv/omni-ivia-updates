@@ -5,6 +5,7 @@ const {
   validatePayload,
   getHazardous,
   getGMTDiff,
+  getStatus,
 } = require("./dataHelper");
 const moment = require("moment");
 const momentTZ = require("moment-timezone");
@@ -17,13 +18,9 @@ const ddb = new AWS.DynamoDB.DocumentClient({
 const {
   SHIPMENT_APAR_TABLE, //"T19262"
   SHIPMENT_HEADER_TABLE,
-  INSTRUCTIONS_TABLE,
   SHIPMENT_DESC_TABLE,
   CONFIRMATION_COST,
-  CONSOL_STOP_HEADERS,
-  CONSOL_STOP_ITEMS,
   CONFIRMATION_COST_INDEX_KEY_NAME,
-  INSTRUCTIONS_INDEX_KEY_NAME,
   IVIA_DDB,
   IVIA_VENDOR_ID,
   IVIA_CARRIER_ID,
@@ -252,8 +249,10 @@ function validateAndCheckIfDataSentToIvia(payload, ConsolNo) {
         TableName: IVIA_DDB,
         IndexName: "omni-ivia-ConsolNo-index",
         KeyConditionExpression: "ConsolNo = :ConsolNo",
+        FilterExpression: "status = :status",
         ExpressionAttributeValues: {
           ":ConsolNo": ConsolNo.toString(),
+          ":status": getStatus().SUCCESS,
         },
       };
       const data = await ddb.query(params).promise();

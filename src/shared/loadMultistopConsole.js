@@ -5,6 +5,7 @@ const {
   validatePayload,
   getHazardous,
   getGMTDiff,
+  getStatus,
 } = require("./dataHelper");
 const moment = require("moment");
 const momentTZ = require("moment-timezone");
@@ -250,8 +251,10 @@ function validateAndCheckIfDataSentToIvia(payload, ConsolNo) {
         TableName: IVIA_DDB,
         IndexName: "omni-ivia-ConsolNo-index",
         KeyConditionExpression: "ConsolNo = :ConsolNo",
+        FilterExpression: "status = :status",
         ExpressionAttributeValues: {
           ":ConsolNo": ConsolNo.toString(),
+          ":status": getStatus().SUCCESS,
         },
       };
       console.log("params", params);
