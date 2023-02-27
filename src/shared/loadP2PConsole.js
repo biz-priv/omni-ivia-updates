@@ -77,11 +77,12 @@ const loadP2PConsole = async (dynamoData, shipmentAparData) => {
     companyName: confirmationCost[0].ShipName,
     cargo: cargo,
     scheduledDate: getGMTDiff(confirmationCost[0].PickupDateTime),
-    specialInstructions:
+    specialInstructions: (
       (confirmationCost[0].ShipAddress2 === ""
         ? ""
         : confirmationCost[0].ShipAddress2 + " ") +
-      confirmationCost[0].PickupNote,
+      confirmationCost[0].PickupNote
+    ).slice(0, 200),
   };
   const dStopTypeData = {
     stopType: "D",
@@ -96,11 +97,12 @@ const loadP2PConsole = async (dynamoData, shipmentAparData) => {
     },
     companyName: confirmationCost[0].ConName,
     scheduledDate: getGMTDiff(confirmationCost[0].DeliveryDateTime),
-    specialInstructions:
+    specialInstructions: (
       (confirmationCost[0].ConAddress2 === ""
         ? ""
         : confirmationCost[0].ConAddress2 + " ") +
-      confirmationCost[0].DeliveryNote,
+      confirmationCost[0].DeliveryNote
+    ).slice(0, 200),
   };
 
   const iviaPayload = {
