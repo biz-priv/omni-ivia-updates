@@ -31,7 +31,10 @@ module.exports.handler = async (event, context, callback) => {
         const NewImage = data[index].dynamodb.NewImage;
         const streamRecord = AWS.DynamoDB.Converter.unmarshall(NewImage);
         const payload = JSON.parse(streamRecord.data);
-        if (streamRecord.status === getStatus().FAILED) {
+        if (
+          streamRecord.status === getStatus().FAILED ||
+          streamRecord.status === getStatus().SUCCESS
+        ) {
           continue;
         }
         //validate the payload
