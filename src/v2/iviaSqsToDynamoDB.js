@@ -15,9 +15,10 @@ module.exports.handler = async (event, context, callback) => {
 
     const faildSqsItemList = [];
     //NOTE :- delay 45
-    await setDelay(45);
+    // await setDelay(45);
 
     for (let index = 0; index < sqsEventRecords.length; index++) {
+      await setDelay(45);
       try {
         const sqsItem = sqsEventRecords[index];
         const dynamoData = JSON.parse(sqsItem.body);
@@ -122,6 +123,7 @@ module.exports.handler = async (event, context, callback) => {
       } catch (error) {
         console.log("error", error);
       }
+
       //if same event multiple line
     }
     return prepareBatchFailureObj(faildSqsItemList);
