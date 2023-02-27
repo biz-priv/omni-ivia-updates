@@ -23,6 +23,9 @@ module.exports.handler = async (event, context, callback) => {
     // processing all the array of records
     for (let index = 0; index < data.length; index++) {
       try {
+        if (streamRecord.status === getStatus().FAILED) {
+          continue;
+        }
         const NewImage = data[index].dynamodb.NewImage;
         const streamRecord = AWS.DynamoDB.Converter.unmarshall(NewImage);
         const payload = JSON.parse(streamRecord.data);
