@@ -196,20 +196,24 @@ function validateAndCheckIfDataSentToIvia(payload, shipmentApar) {
         TableName: IVIA_DDB,
         IndexName: "omni-ivia-ConsolNo-index",
         KeyConditionExpression: "ConsolNo = :ConsolNo",
-        FilterExpression: "FK_OrderNo = :FK_OrderNo and status = :status",
+        FilterExpression: "FK_OrderNo = :FK_OrderNo",
         ExpressionAttributeValues: {
           ":ConsolNo": shipmentApar.ConsolNo.toString(),
           ":FK_OrderNo": shipmentApar.FK_OrderNo.toString(),
-          ":status": getStatus().FAILED,
+          // ":status": getStatus().FAILED,
         },
       };
       console.log("params", params);
       const data = await ddb.query(params).promise();
-      console.log("data", data.Items.length);
-      if (data.Items.length > 0) {
-        resolve(false);
-      } else {
+      const latestData = data.Items.filter(
+        (e) =>
+          e.status === getStatus().SUCCESS ||
+          e.status === getStatus().IN_PROGRESS
+      );
+      if (latestData.length > 0) {
         resolve(true);
+      } else {
+        resolve(false);
       }
     } catch (error) {
       console.log("dynamoError:", error);

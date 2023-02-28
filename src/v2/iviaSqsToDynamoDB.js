@@ -18,8 +18,8 @@ module.exports.handler = async (event, context, callback) => {
     // await setDelay(45);
 
     for (let index = 0; index < sqsEventRecords.length; index++) {
-      await setDelay(45);
       try {
+        await setDelay(45);
         const sqsItem = sqsEventRecords[index];
         const dynamoData = JSON.parse(sqsItem.body);
         // const dynamoData = {
@@ -100,7 +100,10 @@ module.exports.handler = async (event, context, callback) => {
            * loadP2PNonConsol
            */
           await loadP2PNonConsol(dynamoData, shipmentAparData);
-        } else if (parseInt(shipmentAparData.ConsolNo) > 0) {
+        } else if (
+          parseInt(shipmentAparData.ConsolNo) > 0 &&
+          parseInt(shipmentAparData.SeqNo) < 9999
+        ) {
           if (["HS", "TL"].includes(shipmentAparData?.FK_ServiceId)) {
             /**
              * loadP2PConsole

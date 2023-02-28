@@ -250,19 +250,25 @@ function validateAndCheckIfDataSentToIvia(payload, ConsolNo) {
         TableName: IVIA_DDB,
         IndexName: "omni-ivia-ConsolNo-index",
         KeyConditionExpression: "ConsolNo = :ConsolNo",
-        FilterExpression: "status = :status",
+        // FilterExpression: "status = :status",
         ExpressionAttributeValues: {
           ":ConsolNo": ConsolNo.toString(),
-          ":status": getStatus().FAILED,
+          // ":status": getStatus().FAILED,
         },
       };
       console.log("params", params);
       const data = await ddb.query(params).promise();
       console.log("data", data.Items.length);
-      if (data.Items.length > 0) {
-        resolve(false);
-      } else {
+
+      const latestData = data.Items.filter(
+        (e) =>
+          e.status === getStatus().SUCCESS ||
+          e.status === getStatus().IN_PROGRESS
+      );
+      if (latestData.length > 0) {
         resolve(true);
+      } else {
+        resolve(false);
       }
     } catch (error) {
       console.log("dynamoError:", error);

@@ -158,11 +158,13 @@ async function fetchDataFromTablesList(CONSOL_NO) {
       IndexName: globalConsolIndex,
       KeyConditionExpression: "ConsolNo = :ConsolNo",
       FilterExpression:
-        "FK_VendorId = :FK_VendorId and Consolidation = :Consolidation",
+        "FK_VendorId = :FK_VendorId and Consolidation = :Consolidation and SeqNo <> :SeqNo and FK_OrderNo <> :FK_OrderNo",
       ExpressionAttributeValues: {
         ":ConsolNo": CONSOL_NO.toString(),
         ":FK_VendorId": IVIA_VENDOR_ID.toString(),
         ":Consolidation": "N",
+        ":SeqNo": "9999",
+        ":FK_OrderNo": CONSOL_NO.toString(),
       },
     };
 
@@ -253,18 +255,25 @@ function validateAndCheckIfDataSentToIvia(payload, ConsolNo) {
         TableName: IVIA_DDB,
         IndexName: "omni-ivia-ConsolNo-index",
         KeyConditionExpression: "ConsolNo = :ConsolNo",
-        FilterExpression: "status = :status",
+        // FilterExpression: "status = :status",
         ExpressionAttributeValues: {
           ":ConsolNo": ConsolNo.toString(),
-          ":status": getStatus().FAILED,
+          // ":status": getStatus().FAILED,
         },
       };
+      console.log("params", params);
       const data = await ddb.query(params).promise();
       console.log("data", data.Items.length);
-      if (data.Items.length > 0) {
-        resolve(false);
-      } else {
+
+      const latestData = data.Items.filter(
+        (e) =>
+          e.status === getStatus().SUCCESS ||
+          e.status === getStatus().IN_PROGRESS
+      );
+      if (latestData.length > 0) {
         resolve(true);
+      } else {
+        resolve(false);
       }
     } catch (error) {
       console.log("dynamoError:", error);
