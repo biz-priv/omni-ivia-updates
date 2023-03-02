@@ -139,7 +139,7 @@ const loadP2PNonConsol = async (dynamoData, shipmentAparData) => {
     carrierId: IVIA_CARRIER_ID, // IVIA_CARRIER_ID = 1000025
     refNums: {
       refNum1: housebill_delimited[0] ?? "", // tbl_shipmentHeader.pk_orderNo as hwb/ tbl_confirmationCost.consolNo(if it is a consol)
-      refNum2: confirmationCost[0].FK_OrderNo ?? "", // tbl_confirmationcost.fk_orderno as filenumber
+      refNum2: "", // as discussed it will be empty always. confirmationCost[0].FK_OrderNo ?? "", // tbl_confirmationcost.fk_orderno as filenumber
     },
     shipmentDetails: {
       stops: [...pStopTypeData, ...dStopTypeData],
