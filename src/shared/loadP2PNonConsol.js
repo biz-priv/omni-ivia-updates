@@ -85,50 +85,53 @@ const loadP2PNonConsol = async (dynamoData, shipmentAparData) => {
     };
   });
 
-  const pStopTypeData = JSON.parse(
-    JSON.stringify(filteredConfirmationCost)
-  ).map((e) => {
-    return {
-      stopType: "P",
-      stopNum: 0,
-      housebills: housebill_delimited,
-      address: {
-        address1: e.ShipAddress1,
-        city: e.ShipCity,
-        country: e.FK_ShipCountry,
-        state: e.FK_ShipState,
-        zip: e.ShipZip,
+  const fcc = JSON.parse(JSON.stringify(filteredConfirmationCost));
+  let pStopTypeData = [],
+    dStopTypeData = [];
+  for (let index = 0; index < fcc.length; index++) {
+    const e = fcc[index];
+    pStopTypeData = [
+      ...pStopTypeData,
+      {
+        stopType: "P",
+        stopNum: 0,
+        housebills: housebill_delimited,
+        address: {
+          address1: e.ShipAddress1,
+          city: e.ShipCity,
+          country: e.FK_ShipCountry,
+          state: e.FK_ShipState,
+          zip: e.ShipZip,
+        },
+        companyName: e.ShipName,
+        cargo: cargo,
+        scheduledDate: await getGMTDiff(e.PickupDateTime, e.ShipZip),
+        specialInstructions: (
+          (e.ShipAddress2 === "" ? "" : e.ShipAddress2 + " ") + e.PickupNote
+        ).slice(0, 200),
       },
-      companyName: e.ShipName,
-      cargo: cargo,
-      scheduledDate: getGMTDiff(e.PickupDateTime),
-      specialInstructions: (
-        (e.ShipAddress2 === "" ? "" : e.ShipAddress2 + " ") + e.PickupNote
-      ).slice(0, 200),
-    };
-  });
-
-  const dStopTypeData = JSON.parse(
-    JSON.stringify(filteredConfirmationCost)
-  ).map((e) => {
-    return {
-      stopType: "D",
-      stopNum: 1,
-      housebills: housebill_delimited,
-      address: {
-        address1: e.ConAddress1,
-        city: e.ConCity,
-        country: e.FK_ConCountry,
-        state: e.FK_ConState,
-        zip: e.ConZip,
+    ];
+    dStopTypeData = [
+      ...dStopTypeData,
+      {
+        stopType: "D",
+        stopNum: 1,
+        housebills: housebill_delimited,
+        address: {
+          address1: e.ConAddress1,
+          city: e.ConCity,
+          country: e.FK_ConCountry,
+          state: e.FK_ConState,
+          zip: e.ConZip,
+        },
+        companyName: e.ConName,
+        scheduledDate: await getGMTDiff(e.DeliveryDateTime, e.ConZip),
+        specialInstructions: (
+          (e.ConAddress2 === "" ? "" : e.ConAddress2 + " ") + e.DeliveryNote
+        ).slice(0, 200),
       },
-      companyName: e.ConName,
-      scheduledDate: getGMTDiff(e.DeliveryDateTime),
-      specialInstructions: (
-        (e.ConAddress2 === "" ? "" : e.ConAddress2 + " ") + e.DeliveryNote
-      ).slice(0, 200),
-    };
-  });
+    ];
+  }
 
   const ORDER_NO_LIST = shipmentApar.FK_OrderNo;
   const filteredSH = shipmentDesc.filter((e) =>
@@ -179,7 +182,7 @@ const loadP2PNonConsol = async (dynamoData, shipmentAparData) => {
     console.log("iviaTableData", iviaTableData);
     await putItem(IVIA_DDB, iviaTableData);
   } else {
-    console.log("Already sent to IVIA");
+    console.log("Already sent to IVIA or validation error");
   }
 };
 

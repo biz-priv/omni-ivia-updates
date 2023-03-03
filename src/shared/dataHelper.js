@@ -168,25 +168,124 @@ function validatePayload(payload) {
   }
 }
 
-function getGMTDiff(dateTime) {
-  const momentTZ = require("moment-timezone");
-  const moment = require("moment");
-  if (
-    dateTime &&
-    dateTime.length > 1 &&
-    moment(dateTime).isValid() &&
-    !dateTime.includes("1970")
-  ) {
-    const dateArr = dateTime.split(" ");
-    const dateStr =
-      dateArr[0] +
-      "T" +
-      (dateArr[1].length > 0 ? dateArr[1] : "00:00:00") +
-      "-06:00";
-    return momentTZ(dateStr).tz("Etc/GMT").diff("1970-01-01", "ms");
-  } else {
+/**
+ *
+ * @param {*} dateTime
+ * @returns
+ */
+async function getGMTDiff(dateTime, zip) {
+  try {
+    console.log("dateTime, zip", dateTime, zip);
+    const momentTZ = require("moment-timezone");
+    const moment = require("moment");
+    if (
+      dateTime &&
+      dateTime.length > 1 &&
+      moment(dateTime).isValid() &&
+      !dateTime.includes("1970")
+    ) {
+      const dateArr = dateTime.split(" ");
+      let offset = await getTimeZoneOffsetData(dateArr[0], zip);
+      if (offset <= 0) {
+        let number = (offset * -1).toString();
+        console.log("number", number);
+        number = "-" + (number.length > 1 ? number : "0" + number) + ":00";
+        offset = number;
+      } else {
+        let number = (offset * 1).toString();
+        number = "+" + (number.length > 1 ? number : "0" + number) + ":00";
+        offset = number;
+      }
+      const dateStr =
+        dateArr[0] +
+        "T" +
+        (dateArr[1].length > 0 ? dateArr[1] : "00:00:00") +
+        offset;
+      return momentTZ(dateStr).tz("Etc/GMT").diff("1970-01-01", "ms");
+    } else {
+      return "";
+    }
+  } catch (error) {
+    console.log("error", error);
     return "";
   }
+}
+
+/**
+ * get the timezone offset for zipcode
+ * @param {*} params
+ * @returns
+ */
+async function getTimeZoneOffsetData(dateTime, zip) {
+  const AWS = require("aws-sdk");
+  const ddb = new AWS.DynamoDB.DocumentClient({
+    region: process.env.REGION,
+  });
+
+  let offSet = 0;
+  /**
+   * ZIP_CODES
+   * PK:- PK_SeqNo SK:- FK_AirportId
+   * index Zip-index  Zip
+   */
+
+  const paramZipCode = {
+    TableName: process.env.ZIP_CODES,
+    IndexName: "Zip-index",
+    KeyConditionExpression: "Zip = :Zip",
+    ExpressionAttributeValues: {
+      ":Zip": zip.toString(),
+    },
+  };
+  let zipCodeData = await ddb.query(paramZipCode).promise();
+  zipCodeData = zipCodeData.Items.length > 0 ? zipCodeData.Items[0] : {};
+  console.log("zipCodeData", zipCodeData);
+  const state = zipCodeData.State;
+  if (state === "AZ") {
+    offSet = 6;
+  } else {
+    const cuWeek = getWeekCount(dateTime);
+    if (cuWeek >= 11 && cuWeek <= 44) {
+      offSet = 5;
+    } else {
+      offSet = 6;
+    }
+  }
+
+  /**
+   * TIMEZONE_ZIP_CR
+   * PK:- ZipCode SK:- FK_TimeZoneCode
+   */
+  const paramtimezoneCr = {
+    TableName: process.env.TIMEZONE_ZIP_CR,
+    KeyConditionExpression: "ZipCode = :ZipCode",
+    ExpressionAttributeValues: {
+      ":ZipCode": zip.toString(),
+    },
+  };
+  let timezoneCrData = await ddb.query(paramtimezoneCr).promise();
+  timezoneCrData =
+    timezoneCrData.Items.length > 0 ? timezoneCrData.Items[0] : {};
+  console.log("timezoneCrData", timezoneCrData);
+
+  /**
+   * TIMEZONE_MASTER
+   * PK:- PK_TimeZoneCode
+   */
+  const paramTimezoneMaster = {
+    TableName: process.env.TIMEZONE_MASTER,
+    KeyConditionExpression: "PK_TimeZoneCode = :PK_TimeZoneCode",
+    ExpressionAttributeValues: {
+      ":PK_TimeZoneCode": timezoneCrData.FK_TimeZoneCode,
+    },
+  };
+  let timezoneMaster = await ddb.query(paramTimezoneMaster).promise();
+  timezoneMaster =
+    timezoneMaster.Items.length > 0 ? timezoneMaster.Items[0] : {};
+  console.log("timezoneMaster", timezoneMaster);
+  offSet = parseInt(timezoneMaster.HoursAway) - offSet;
+  console.log("offSet", offSet);
+  return offSet;
 }
 
 /**
@@ -234,6 +333,42 @@ function getStatus() {
 //     return "";
 //   }
 // }
+
+function getWeekCount(date) {
+  Date.prototype.getWeek = function (dowOffset) {
+    /*getWeek() was developed by Nick Baicoianu at MeanFreePath: http://www.meanfreepath.com */
+
+    dowOffset = typeof dowOffset == "number" ? dowOffset : 0; //default dowOffset to zero
+    var newYear = new Date(this.getFullYear(), 0, 1);
+    var day = newYear.getDay() - dowOffset; //the day of week the year begins on
+    day = day >= 0 ? day : day + 7;
+    var daynum =
+      Math.floor(
+        (this.getTime() -
+          newYear.getTime() -
+          (this.getTimezoneOffset() - newYear.getTimezoneOffset()) * 60000) /
+          86400000
+      ) + 1;
+    var weeknum;
+    //if the year starts before the middle of a week
+    if (day < 4) {
+      weeknum = Math.floor((daynum + day - 1) / 7) + 1;
+      if (weeknum > 52) {
+        let nYear = new Date(this.getFullYear() + 1, 0, 1);
+        let nday = nYear.getDay() - dowOffset;
+        nday = nday >= 0 ? nday : nday + 7;
+        /*if the next year starts before the middle of
+                  the week, it is week #1 of that year*/
+        weeknum = nday < 4 ? 1 : 53;
+      }
+    } else {
+      weeknum = Math.floor((daynum + day - 1) / 7);
+    }
+    return weeknum;
+  };
+  // console.log(new Date(date).getWeek());
+  return new Date(date).getWeek();
+}
 
 module.exports = {
   prepareBatchFailureObj,

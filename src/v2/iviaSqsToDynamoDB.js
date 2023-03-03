@@ -61,8 +61,6 @@ module.exports.handler = async (event, context, callback) => {
       } catch (error) {
         console.log("error", error);
       }
-
-      //if same event multiple line
     }
     return prepareBatchFailureObj(faildSqsItemList);
   } catch (error) {
