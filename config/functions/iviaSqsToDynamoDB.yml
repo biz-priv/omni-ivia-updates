@@ -3,7 +3,7 @@ function:
   name: omni-ivia-sqs-to-dynamo-db-${self:provider.stage}
   handler: src/v2/iviaSqsToDynamoDB.handler
   memorySize: 1024
-  timeout: 90
+  timeout: 300
   # provisionedConcurrency: 5
   # concurrencyAutoscaling: true
   layers:
@@ -36,5 +36,5 @@ function:
   events:
     - sqs:
         arn: ${ssm:/omni-wt-rt-updates/${self:provider.stage}/ivia/sqs.arn~true}
-        batchSize: 10
+        batchSize: 2
         functionResponseType: ReportBatchItemFailures
