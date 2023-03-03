@@ -177,7 +177,6 @@ function validatePayload(payload) {
 async function getGMTDiff(dateTime, zip) {
   try {
     console.log("dateTime, zip", dateTime, zip);
-    const momentTZ = require("moment-timezone");
     const moment = require("moment");
     if (
       dateTime &&
@@ -371,6 +370,37 @@ function getWeekCount(date) {
   return new Date(date).getWeek();
 }
 
+function getNotesP2Pconsols(range, datetime, type) {
+  const moment = require("moment");
+  let msg = "";
+  if (type === "p") {
+    if (range > datetime) {
+      msg =
+        "Pickup between " +
+        moment(datetime).format("HH:mm") +
+        " and " +
+        moment(range).format("HH:mm");
+      console.log("", msg);
+    } else {
+      msg = "Pickup at " + moment(datetime).format("HH:mm");
+      console.log("", msg);
+    }
+  } else {
+    if (range > datetime) {
+      msg =
+        "Deliver between " +
+        moment(datetime).format("HH:mm") +
+        " and " +
+        moment(range).format("HH:mm");
+      console.log("", msg);
+    } else {
+      msg = "Deliver at " + moment(datetime).format("HH:mm");
+      console.log("", msg);
+    }
+  }
+  return msg;
+}
+
 module.exports = {
   prepareBatchFailureObj,
   getLatestObjByTimeStamp,
@@ -381,4 +411,5 @@ module.exports = {
   getGMTDiff,
   setDelay,
   getStatus,
+  getNotesP2Pconsols,
 };
