@@ -129,6 +129,7 @@ function validatePayload(payload) {
               housebills: Joi.array().min(1).required(),
               address: Joi.object({
                 address1: Joi.string().required(),
+                address2: Joi.string().allow(""),
                 city: Joi.string().required(),
                 country: Joi.string().required(), // required
                 state: Joi.string().required(),
