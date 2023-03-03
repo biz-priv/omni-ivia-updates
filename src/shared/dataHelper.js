@@ -1,3 +1,4 @@
+const AWS = require("aws-sdk");
 function prepareBatchFailureObj(data) {
   const batchItemFailures = data.map((e) => ({
     itemIdentifier: e.messageId,
@@ -201,7 +202,8 @@ async function getGMTDiff(dateTime, zip) {
         "T" +
         (dateArr[1].length > 0 ? dateArr[1] : "00:00:00") +
         offset;
-      return momentTZ(dateStr).tz("Etc/GMT").diff("1970-01-01", "ms");
+      // return momentTZ(dateStr).tz("Etc/GMT").diff("1970-01-01", "ms");
+      return moment(dateStr).diff("1970-01-01", "ms");
     } else {
       return "";
     }
@@ -217,7 +219,6 @@ async function getGMTDiff(dateTime, zip) {
  * @returns
  */
 async function getTimeZoneOffsetData(dateTime, zip) {
-  const AWS = require("aws-sdk");
   const ddb = new AWS.DynamoDB.DocumentClient({
     region: process.env.REGION,
   });
