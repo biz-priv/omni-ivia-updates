@@ -103,11 +103,10 @@ const loadMultistopConsole = async (dynamoData, shipmentAparData) => {
       },
       companyName: csh?.ConsolStopName,
       cargo: cargo,
-      scheduledDate: getGMTDiff(
+      scheduledDate:
         csh.ConsolStopDate.split(" ")[0] +
-          " " +
-          (csh.ConsolStopTimeBegin.split(" ")?.[1] ?? "")
-      ),
+        " " +
+        (csh.ConsolStopTimeBegin.split(" ")?.[1] ?? ""),
       specialInstructions: (
         (csh.ConsolStopAddress2 === "" ? "" : csh.ConsolStopAddress2 + " ") +
         sInsNotes
@@ -139,11 +138,10 @@ const loadMultistopConsole = async (dynamoData, shipmentAparData) => {
         zip: csh.ConsolStopZip,
       },
       companyName: csh?.ConsolStopName,
-      scheduledDate: getGMTDiff(
+      scheduledDate:
         csh.ConsolStopDate.split(" ")?.[0] +
-          " " +
-          (csh.ConsolStopTimeBegin.split(" ")?.[1] ?? "")
-      ),
+        " " +
+        (csh.ConsolStopTimeBegin.split(" ")?.[1] ?? ""),
       specialInstructions: (
         (csh.ConsolStopAddress2 === "" ? "" : csh.ConsolStopAddress2 + " ") +
         sInsNotes
@@ -151,6 +149,22 @@ const loadMultistopConsole = async (dynamoData, shipmentAparData) => {
     };
     return stopPayload;
   });
+
+  const margedStops = [...pTypeShipmentMap, ...dTypeShipmentMap];
+  let stopsList = [];
+  for (let index = 0; index < margedStops.length; index++) {
+    const element = margedStops[index];
+    stopsList = [
+      ...stopsList,
+      {
+        ...element,
+        scheduledDate: await getGMTDiff(
+          element.scheduledDate,
+          element.address.zip
+        ),
+      },
+    ];
+  }
 
   const filteredSH = shipmentDesc.filter((e) =>
     ORDER_NO_LIST.includes(e.FK_OrderNo)
@@ -163,7 +177,7 @@ const loadMultistopConsole = async (dynamoData, shipmentAparData) => {
       refNum2: "", // as query filenumber value is always "" hardcode
     },
     shipmentDetails: {
-      stops: [...pTypeShipmentMap, ...dTypeShipmentMap],
+      stops: stopsList,
       dockHigh: "N", // req [Y / N]
       hazardous: getHazardous(filteredSH),
       liftGate: getLiftGate(shipmentApar),

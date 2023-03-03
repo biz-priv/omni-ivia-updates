@@ -76,7 +76,10 @@ const loadP2PConsole = async (dynamoData, shipmentAparData) => {
     },
     companyName: confirmationCost[0].ShipName,
     cargo: cargo,
-    scheduledDate: getGMTDiff(confirmationCost[0].PickupDateTime),
+    scheduledDate: await getGMTDiff(
+      confirmationCost[0].PickupDateTime,
+      confirmationCost[0].ShipZip
+    ),
     specialInstructions: (
       (confirmationCost[0].ShipAddress2 === ""
         ? ""
@@ -96,7 +99,10 @@ const loadP2PConsole = async (dynamoData, shipmentAparData) => {
       zip: confirmationCost[0].ConZip,
     },
     companyName: confirmationCost[0].ConName,
-    scheduledDate: getGMTDiff(confirmationCost[0].DeliveryDateTime),
+    scheduledDate: await getGMTDiff(
+      confirmationCost[0].DeliveryDateTime,
+      confirmationCost[0].ConZip
+    ),
     specialInstructions: (
       (confirmationCost[0].ConAddress2 === ""
         ? ""
