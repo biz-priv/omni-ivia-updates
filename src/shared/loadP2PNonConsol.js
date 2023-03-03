@@ -139,10 +139,6 @@ const loadP2PNonConsol = async (dynamoData, shipmentAparData) => {
       },
     ];
   }
-  console.log("pStopTypeData", pStopTypeData);
-  console.log("dStopTypeData", dStopTypeData);
-
-  return {};
 
   const ORDER_NO_LIST = shipmentApar.FK_OrderNo;
   const filteredSH = shipmentDesc.filter((e) =>
