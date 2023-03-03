@@ -6,6 +6,7 @@ const {
   getHazardous,
   getGMTDiff,
   getStatus,
+  getNotesP2Pconsols,
 } = require("./dataHelper");
 const moment = require("moment");
 const momentTZ = require("moment-timezone");
@@ -69,6 +70,7 @@ const loadP2PConsole = async (dynamoData, shipmentAparData) => {
     housebills: housebill_delimited,
     address: {
       address1: confirmationCost[0].ShipAddress1,
+      address2: confirmationCost[0].ShipAddress2,
       city: confirmationCost[0].ShipCity,
       country: confirmationCost[0].FK_ShipCountry,
       state: confirmationCost[0].FK_ShipState,
@@ -81,10 +83,9 @@ const loadP2PConsole = async (dynamoData, shipmentAparData) => {
       confirmationCost[0].ShipZip
     ),
     specialInstructions: (
-      (confirmationCost[0].ShipAddress2 === ""
-        ? ""
-        : confirmationCost[0].ShipAddress2 + " ") +
-      confirmationCost[0].PickupNote
+      getNotesP2Pconsols(e.PickupTimeRange, e.PickupDateTime, "p") +
+      " " +
+      e.PickupNote
     ).slice(0, 200),
   };
   const dStopTypeData = {
@@ -93,6 +94,7 @@ const loadP2PConsole = async (dynamoData, shipmentAparData) => {
     housebills: housebill_delimited,
     address: {
       address1: confirmationCost[0].ConAddress1,
+      address2: confirmationCost[0].ConAddress2,
       city: confirmationCost[0].ConCity,
       country: confirmationCost[0].FK_ConCountry,
       state: confirmationCost[0].FK_ConState,
@@ -104,10 +106,9 @@ const loadP2PConsole = async (dynamoData, shipmentAparData) => {
       confirmationCost[0].ConZip
     ),
     specialInstructions: (
-      (confirmationCost[0].ConAddress2 === ""
-        ? ""
-        : confirmationCost[0].ConAddress2 + " ") +
-      confirmationCost[0].DeliveryNote
+      getNotesP2Pconsols(e.DeliveryTimeRange, e.DeliveryDateTime, "d") +
+      " " +
+      e.DeliveryNote
     ).slice(0, 200),
   };
 

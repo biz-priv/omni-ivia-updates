@@ -6,6 +6,7 @@ const {
   getHazardous,
   getGMTDiff,
   getStatus,
+  getNotesP2Pconsols,
 } = require("./dataHelper");
 const moment = require("moment");
 const momentTZ = require("moment-timezone");
@@ -98,6 +99,7 @@ const loadP2PNonConsol = async (dynamoData, shipmentAparData) => {
         housebills: housebill_delimited,
         address: {
           address1: e.ShipAddress1,
+          address2: e.ShipAddress2,
           city: e.ShipCity,
           country: e.FK_ShipCountry,
           state: e.FK_ShipState,
@@ -107,7 +109,9 @@ const loadP2PNonConsol = async (dynamoData, shipmentAparData) => {
         cargo: cargo,
         scheduledDate: await getGMTDiff(e.PickupDateTime, e.ShipZip),
         specialInstructions: (
-          (e.ShipAddress2 === "" ? "" : e.ShipAddress2 + " ") + e.PickupNote
+          getNotesP2Pconsols(e.PickupTimeRange, e.PickupDateTime, "p") +
+          " " +
+          e.PickupNote
         ).slice(0, 200),
       },
     ];
@@ -119,6 +123,7 @@ const loadP2PNonConsol = async (dynamoData, shipmentAparData) => {
         housebills: housebill_delimited,
         address: {
           address1: e.ConAddress1,
+          address2: e.ConAddress2,
           city: e.ConCity,
           country: e.FK_ConCountry,
           state: e.FK_ConState,
@@ -127,11 +132,17 @@ const loadP2PNonConsol = async (dynamoData, shipmentAparData) => {
         companyName: e.ConName,
         scheduledDate: await getGMTDiff(e.DeliveryDateTime, e.ConZip),
         specialInstructions: (
-          (e.ConAddress2 === "" ? "" : e.ConAddress2 + " ") + e.DeliveryNote
+          getNotesP2Pconsols(e.DeliveryTimeRange, e.DeliveryDateTime, "d") +
+          " " +
+          e.DeliveryNote
         ).slice(0, 200),
       },
     ];
   }
+  console.log("pStopTypeData", pStopTypeData);
+  console.log("dStopTypeData", dStopTypeData);
+
+  return {};
 
   const ORDER_NO_LIST = shipmentApar.FK_OrderNo;
   const filteredSH = shipmentDesc.filter((e) =>
