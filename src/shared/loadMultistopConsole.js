@@ -40,7 +40,7 @@ const loadMultistopConsole = async (dynamoData, shipmentAparData) => {
   const CONSOL_NO = shipmentAparData.ConsolNo;
 
   const dataSet = await fetchDataFromTablesList(CONSOL_NO);
-  console.log("dataSet", JSON.stringify(dataSet));
+  // console.log("dataSet", JSON.stringify(dataSet));
 
   const shipmentApar = dataSet.shipmentApar;
   const shipmentHeader = dataSet.shipmentHeader;
@@ -89,6 +89,18 @@ const loadMultistopConsole = async (dynamoData, shipmentAparData) => {
       )
       .map((ei) => ei.Note)
       .join(" ");
+    let spInsMsg = "Pickup ";
+    spInsMsg +=
+      csh.ConsolStopTimeEnd > csh.ConsolStopTimeBegin
+        ? "between " +
+          moment(csh.ConsolStopTimeBegin).format("HH:mm") +
+          " and" +
+          moment(csh.ConsolStopTimeEnd).format("HH:mm")
+        : "at " + moment(csh.ConsolStopTimeBegin).format("HH:mm");
+
+    console.log("ConsolStopTimeEnd", csh.ConsolStopTimeEnd);
+    console.log("ConsolStopTimeBegin", csh.ConsolStopTimeBegin);
+    console.log("pTypeShipment spInsMsg", spInsMsg);
 
     const stopPayload = {
       stopType: "P",
@@ -96,6 +108,7 @@ const loadMultistopConsole = async (dynamoData, shipmentAparData) => {
       housebills: [...new Set(ele.map((e) => e.Housebill))],
       address: {
         address1: csh.ConsolStopAddress1,
+        address2: csh.ConsolStopAddress2,
         city: csh.ConsolStopCity,
         country: csh.FK_ConsolStopCountry,
         state: csh.FK_ConsolStopState,
@@ -107,10 +120,7 @@ const loadMultistopConsole = async (dynamoData, shipmentAparData) => {
         csh.ConsolStopDate.split(" ")[0] +
         " " +
         (csh.ConsolStopTimeBegin.split(" ")?.[1] ?? ""),
-      specialInstructions: (
-        (csh.ConsolStopAddress2 === "" ? "" : csh.ConsolStopAddress2 + " ") +
-        sInsNotes
-      ).slice(0, 200),
+      specialInstructions: (spInsMsg + " " + sInsNotes).slice(0, 200),
     };
     return stopPayload;
   });
@@ -125,13 +135,25 @@ const loadMultistopConsole = async (dynamoData, shipmentAparData) => {
       )
       .map((ei) => ei.Note)
       .join(" ");
+    let spInsMsg = "Deliver ";
+    spInsMsg +=
+      csh.ConsolStopTimeEnd > csh.ConsolStopTimeBegin
+        ? "between " +
+          moment(csh.ConsolStopTimeBegin).format("HH:mm") +
+          " and" +
+          moment(csh.ConsolStopTimeEnd).format("HH:mm")
+        : "at " + moment(csh.ConsolStopTimeBegin).format("HH:mm");
 
+    console.log("ConsolStopTimeEnd", csh.ConsolStopTimeEnd);
+    console.log("ConsolStopTimeBegin", csh.ConsolStopTimeBegin);
+    console.log("pTypeShipment spInsMsg", spInsMsg);
     const stopPayload = {
       stopType: "D",
       stopNum: e,
       housebills: [...new Set(ele.map((e) => e.Housebill))],
       address: {
         address1: csh.ConsolStopAddress1,
+        address2: csh.ConsolStopAddress2,
         city: csh.ConsolStopCity,
         country: csh.FK_ConsolStopCountry,
         state: csh.FK_ConsolStopState,
@@ -142,15 +164,14 @@ const loadMultistopConsole = async (dynamoData, shipmentAparData) => {
         csh.ConsolStopDate.split(" ")?.[0] +
         " " +
         (csh.ConsolStopTimeBegin.split(" ")?.[1] ?? ""),
-      specialInstructions: (
-        (csh.ConsolStopAddress2 === "" ? "" : csh.ConsolStopAddress2 + " ") +
-        sInsNotes
-      ).slice(0, 200),
+      specialInstructions: (spInsMsg + " " + sInsNotes).slice(0, 200),
     };
     return stopPayload;
   });
 
   const margedStops = [...pTypeShipmentMap, ...dTypeShipmentMap];
+  console.log("margedStops", JSON.stringify(margedStops));
+
   let stopsList = [];
   for (let index = 0; index < margedStops.length; index++) {
     const element = margedStops[index];

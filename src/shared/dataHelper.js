@@ -177,13 +177,13 @@ function validatePayload(payload) {
  */
 async function getGMTDiff(dateTime, zip) {
   try {
-    console.log("dateTime, zip", dateTime, zip);
     const moment = require("moment");
     if (
       dateTime &&
       dateTime.length > 1 &&
       moment(dateTime).isValid() &&
-      !dateTime.includes("1970")
+      // !dateTime.includes("1970") &&
+      dateTime > "1970-01-01"
     ) {
       const dateArr = dateTime.split(" ");
       let offset = await getTimeZoneOffsetData(dateArr[0], zip);
@@ -203,7 +203,9 @@ async function getGMTDiff(dateTime, zip) {
         (dateArr[1].length > 0 ? dateArr[1] : "00:00:00") +
         offset;
       // return momentTZ(dateStr).tz("Etc/GMT").diff("1970-01-01", "ms");
-      return moment(dateStr).diff("1970-01-01", "ms");
+      const unixDateTime = moment(dateStr).diff("1970-01-01", "ms");
+      console.log("dateTime, zip", dateTime, zip, dateStr, unixDateTime);
+      return unixDateTime;
     } else {
       return "";
     }
