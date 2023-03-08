@@ -14,6 +14,7 @@ const IVIA_XML_UPDATE_URL = process.env.IVIA_XML_UPDATE_URL;
 const IVIA_RESPONSE_DDB = process.env.IVIA_RESPONSE_DDB;
 
 module.exports.handler = async (event, context, callback) => {
+  return "success";
   try {
     console.log("event", JSON.stringify(event));
     const data = event.Records;
