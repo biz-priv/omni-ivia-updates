@@ -121,7 +121,7 @@ const loadMultistopConsole = async (dynamoData, shipmentAparData) => {
         csh.ConsolStopDate.split(" ")[0] +
         " " +
         (csh.ConsolStopTimeBegin.split(" ")?.[1] ?? ""),
-      specialInstructions: (spInsMsg + " " + sInsNotes).slice(0, 200),
+      specialInstructions: (spInsMsg + "\r\n" + sInsNotes).slice(0, 200),
     };
     return stopPayload;
   });
@@ -165,7 +165,7 @@ const loadMultistopConsole = async (dynamoData, shipmentAparData) => {
         csh.ConsolStopDate.split(" ")?.[0] +
         " " +
         (csh.ConsolStopTimeBegin.split(" ")?.[1] ?? ""),
-      specialInstructions: (spInsMsg + " " + sInsNotes).slice(0, 200),
+      specialInstructions: (spInsMsg + "\r\n" + sInsNotes).slice(0, 200),
     };
     return stopPayload;
   });
