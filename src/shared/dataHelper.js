@@ -404,6 +404,20 @@ function getNotesP2Pconsols(range, datetime, type) {
   return msg;
 }
 
+/**
+ * sort stopes data by stop nums
+ * @param {*} data
+ * @param {*} key
+ * @returns
+ */
+function sortObjByStopNo(data, key) {
+  try {
+    return data.sort((a, b) => a[key] - b[key]);
+  } catch (error) {
+    return data;
+  }
+}
+
 module.exports = {
   prepareBatchFailureObj,
   getLatestObjByTimeStamp,
@@ -415,4 +429,5 @@ module.exports = {
   setDelay,
   getStatus,
   getNotesP2Pconsols,
+  sortObjByStopNo,
 };
