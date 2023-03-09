@@ -383,10 +383,8 @@ function getNotesP2Pconsols(range, datetime, type) {
         moment(datetime).format("HH:mm") +
         " and " +
         moment(range).format("HH:mm");
-      console.log("", msg);
     } else {
       msg = "Pickup at " + moment(datetime).format("HH:mm");
-      console.log("", msg);
     }
   } else {
     if (range > datetime) {
@@ -395,10 +393,8 @@ function getNotesP2Pconsols(range, datetime, type) {
         moment(datetime).format("HH:mm") +
         " and " +
         moment(range).format("HH:mm");
-      console.log("", msg);
     } else {
       msg = "Deliver at " + moment(datetime).format("HH:mm");
-      console.log("", msg);
     }
   }
   return msg;
