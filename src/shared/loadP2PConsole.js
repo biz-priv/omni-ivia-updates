@@ -84,7 +84,7 @@ const loadP2PConsole = async (dynamoData, shipmentAparData) => {
     ),
     specialInstructions: (
       getNotesP2Pconsols(e.PickupTimeRange, e.PickupDateTime, "p") +
-      " " +
+      "\r\n" +
       e.PickupNote
     ).slice(0, 200),
   };
@@ -107,7 +107,7 @@ const loadP2PConsole = async (dynamoData, shipmentAparData) => {
     ),
     specialInstructions: (
       getNotesP2Pconsols(e.DeliveryTimeRange, e.DeliveryDateTime, "d") +
-      " " +
+      "\r\n" +
       e.DeliveryNote
     ).slice(0, 200),
   };
