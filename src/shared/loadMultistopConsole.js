@@ -6,6 +6,7 @@ const {
   getHazardous,
   getGMTDiff,
   getStatus,
+  sortObjByStopNo,
 } = require("./dataHelper");
 const moment = require("moment");
 const momentTZ = require("moment-timezone");
@@ -198,7 +199,7 @@ const loadMultistopConsole = async (dynamoData, shipmentAparData) => {
       refNum2: "", // as query filenumber value is always "" hardcode
     },
     shipmentDetails: {
-      stops: stopsList,
+      stops: sortObjByStopNo(stopsList, "stopNum"),
       dockHigh: "N", // req [Y / N]
       hazardous: getHazardous(filteredSH),
       liftGate: getLiftGate(shipmentApar),
