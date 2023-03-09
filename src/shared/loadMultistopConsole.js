@@ -95,7 +95,7 @@ const loadMultistopConsole = async (dynamoData, shipmentAparData) => {
       csh.ConsolStopTimeEnd > csh.ConsolStopTimeBegin
         ? "between " +
           moment(csh.ConsolStopTimeBegin).format("HH:mm") +
-          " and" +
+          " and " +
           moment(csh.ConsolStopTimeEnd).format("HH:mm")
         : "at " + moment(csh.ConsolStopTimeBegin).format("HH:mm");
 
@@ -121,7 +121,13 @@ const loadMultistopConsole = async (dynamoData, shipmentAparData) => {
         csh.ConsolStopDate.split(" ")[0] +
         " " +
         (csh.ConsolStopTimeBegin.split(" ")?.[1] ?? ""),
-      specialInstructions: (spInsMsg + "\r\n" + sInsNotes).slice(0, 200),
+      specialInstructions: (
+        spInsMsg +
+        "\r\n" +
+        csh.ConsolStopNotes +
+        "\r\n" +
+        sInsNotes
+      ).slice(0, 200),
     };
     return stopPayload;
   });
@@ -141,7 +147,7 @@ const loadMultistopConsole = async (dynamoData, shipmentAparData) => {
       csh.ConsolStopTimeEnd > csh.ConsolStopTimeBegin
         ? "between " +
           moment(csh.ConsolStopTimeBegin).format("HH:mm") +
-          " and" +
+          " and " +
           moment(csh.ConsolStopTimeEnd).format("HH:mm")
         : "at " + moment(csh.ConsolStopTimeBegin).format("HH:mm");
 
@@ -165,7 +171,13 @@ const loadMultistopConsole = async (dynamoData, shipmentAparData) => {
         csh.ConsolStopDate.split(" ")?.[0] +
         " " +
         (csh.ConsolStopTimeBegin.split(" ")?.[1] ?? ""),
-      specialInstructions: (spInsMsg + "\r\n" + sInsNotes).slice(0, 200),
+      specialInstructions: (
+        spInsMsg +
+        "\r\n" +
+        csh.ConsolStopNotes +
+        "\r\n" +
+        sInsNotes
+      ).slice(0, 200),
     };
     return stopPayload;
   });
