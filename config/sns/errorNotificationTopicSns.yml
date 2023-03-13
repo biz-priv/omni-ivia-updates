@@ -5,5 +5,5 @@ ErrorNotification:
     Subscription:
       - Endpoint: "iqbal.layek@bizcloudexperts.com"
         Protocol: "email"
-      # - Endpoint: "ashish.akshantal@bizcloudexperts.com"
-      #   Protocol: "email"
+      - Endpoint: "ashish.akshantal@bizcloudexperts.com"
+        Protocol: "email"

@@ -12,6 +12,7 @@ const moment = require("moment");
 const momentTZ = require("moment-timezone");
 const { v4: uuidv4 } = require("uuid");
 const { queryWithPartitionKey, queryWithIndex, putItem } = require("./dynamo");
+const { sendSNSMessage } = require("./errorNotificationHelper");
 const ddb = new AWS.DynamoDB.DocumentClient({
   region: process.env.REGION,
 });
@@ -186,7 +187,7 @@ const loadP2PNonConsol = async (dynamoData, shipmentAparData) => {
       Housebill: houseBillList.join(","),
       ConsolNo: shipmentAparData?.ConsolNo,
       FK_OrderNo: shipmentAparData?.FK_OrderNo,
-      payloadType: "loadP2PNonConsol",
+      payloadType: "P2PNonConsol",
       InsertedTimeStamp: momentTZ
         .tz("America/Chicago")
         .format("YYYY:MM:DD HH:mm:ss")
@@ -197,6 +198,9 @@ const loadP2PNonConsol = async (dynamoData, shipmentAparData) => {
     };
     console.log("iviaTableData", iviaTableData);
     await putItem(IVIA_DDB, iviaTableData);
+    if (isError) {
+      await sendSNSMessage(iviaTableData);
+    }
   } else {
     console.log("Already sent to IVIA or validation error");
   }
