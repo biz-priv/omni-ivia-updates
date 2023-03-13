@@ -1,0 +1,9 @@
+ErrorNotification:
+  Type: AWS::SNS::Topic
+  Properties:
+    TopicName: omni-ivia-create-shipment-error-notification-${self:provider.stage}
+    Subscription:
+      - Endpoint: "iqbal.layek@bizcloudexperts.com"
+        Protocol: "email"
+      # - Endpoint: "ashish.akshantal@bizcloudexperts.com"
+      #   Protocol: "email"

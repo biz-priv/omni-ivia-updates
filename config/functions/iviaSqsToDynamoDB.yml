@@ -32,6 +32,7 @@ function:
     TIMEZONE_MASTER: ${ssm:/omni-wt-rt-updates/${self:provider.stage}/timezone-master/ddb.tableName~true}
     TIMEZONE_ZIP_CR: ${ssm:/omni-wt-rt-updates/${self:provider.stage}/timezone-zip-cr/ddb.tableName~true}
     ZIP_CODES: ${ssm:/omni-wt-rt-updates/${self:provider.stage}/zip-codes/ddb.tableName~true}
+    # ERROR_NOTIFICATION_SNS_ARN: !Ref ErrorNotification
 
   events:
     - sqs:
