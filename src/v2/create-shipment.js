@@ -5,6 +5,7 @@ const { convert } = require("xmlbuilder2");
 const axios = require("axios");
 const { putItem, updateItem } = require("../shared/dynamo");
 const { validatePayload, getStatus } = require("../shared/dataHelper");
+const { sendSNSMessage } = require("../shared/errorNotificationHelper");
 
 const {
   IVIA_DDB,
