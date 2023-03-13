@@ -40,7 +40,13 @@ const loadP2PNonConsol = async (dynamoData, shipmentAparData) => {
     dynamoData
   );
 
-  //get data from all the requied tables
+  /**
+   * get data from all the requied tables
+   * shipmentApar
+   * confirmationCost
+   * shipmentHeader
+   * shipmentDesc
+   */
   const dataSet = await fetchDataFromTables(tableList, primaryKeyValue);
   console.log("dataSet", JSON.stringify(dataSet));
 
@@ -50,6 +56,7 @@ const loadP2PNonConsol = async (dynamoData, shipmentAparData) => {
   );
   const shipmentHeader = dataSet.shipmentHeader;
 
+  // pick data from shipment_desc based on consol no = 0
   const shipmentDesc = dataSet.shipmentDesc.filter((e) => e.ConsolNo === "0");
 
   const filteredConfirmationCost = confirmationCost.filter((e) => {
@@ -161,7 +168,7 @@ const loadP2PNonConsol = async (dynamoData, shipmentAparData) => {
   };
   console.log("iviaPayload", JSON.stringify(iviaPayload));
 
-  const check = await validateAndCheckIfDataSentToIvia(
+  const { check, errorMsg, isError } = await validateAndCheckIfDataSentToIvia(
     iviaPayload,
     shipmentApar
   );
@@ -184,7 +191,9 @@ const loadP2PNonConsol = async (dynamoData, shipmentAparData) => {
         .tz("America/Chicago")
         .format("YYYY:MM:DD HH:mm:ss")
         .toString(),
-      status: getStatus().IN_PROGRESS,
+      status: isError ? getStatus().FAILED : getStatus().IN_PROGRESS,
+      errorMsg: isError ? JSON.stringify(errorMsg) : "",
+      errorReason: isError ? "validation error" : "",
     };
     console.log("iviaTableData", iviaTableData);
     await putItem(IVIA_DDB, iviaTableData);
@@ -193,15 +202,19 @@ const loadP2PNonConsol = async (dynamoData, shipmentAparData) => {
   }
 };
 
+/**
+ * validate the payload structure and check from dynamodb if the data is sent to ivia priviously.
+ * @param {*} payload
+ * @param {*} ConsolNo
+ * @returns
+ */
 function validateAndCheckIfDataSentToIvia(payload, shipmentApar) {
   return new Promise(async (resolve, reject) => {
+    let errorMsg = validatePayload(payload);
+    console.log("errorMsg", errorMsg);
+
     try {
-      validatePayload(payload);
-    } catch (error) {
-      console.log("payload validation error", error);
-      resolve(true);
-    }
-    try {
+      //fetch from ivia table and check if data processed or not
       const params = {
         TableName: IVIA_DDB,
         IndexName: "omni-ivia-ConsolNo-index",
@@ -210,24 +223,50 @@ function validateAndCheckIfDataSentToIvia(payload, shipmentApar) {
         ExpressionAttributeValues: {
           ":ConsolNo": shipmentApar.ConsolNo.toString(),
           ":FK_OrderNo": shipmentApar.FK_OrderNo.toString(),
-          // ":status": getStatus().FAILED,
         },
       };
       console.log("params", params);
       const data = await ddb.query(params).promise();
-      const latestData = data.Items.filter(
-        (e) =>
-          e.status === getStatus().SUCCESS ||
-          e.status === getStatus().IN_PROGRESS
-      );
-      if (latestData.length > 0) {
-        resolve(true);
+      console.log("data:ivia", data);
+
+      if (data.Items.length > 0) {
+        //check if payload is processed or or in progress
+        const latestData = data.Items.filter(
+          (e) =>
+            e.status === getStatus().SUCCESS ||
+            e.status === getStatus().IN_PROGRESS
+        );
+        if (latestData.length > 0) {
+          resolve({ check: true, errorMsg: "", isError: false });
+        } else {
+          //check if the latest failed payload is same with upcomming payload or not.
+          let errorObj = data.Items.filter(
+            (e) => e.status === getStatus().FAILED
+          );
+          errorObj = errorObj.sort(function (x, y) {
+            return x.InsertedTimeStamp < y.InsertedTimeStamp ? 1 : -1;
+          })[0];
+
+          if (errorObj.data != JSON.stringify(payload)) {
+            if (errorMsg != "") {
+              resolve({ check: false, errorMsg: errorMsg, isError: true });
+            } else {
+              resolve({ check: false, errorMsg: "", isError: false });
+            }
+          } else {
+            resolve({ check: true, errorMsg: "", isError: false });
+          }
+        }
       } else {
-        resolve(false);
+        if (errorMsg != "") {
+          resolve({ check: false, errorMsg: errorMsg, isError: true });
+        } else {
+          resolve({ check: false, errorMsg: "", isError: false });
+        }
       }
     } catch (error) {
       console.log("dynamoError:", error);
-      resolve(false);
+      resolve({ check: false, errorMsg: "", isError: false });
     }
   });
 }

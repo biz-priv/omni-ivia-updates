@@ -35,14 +35,9 @@ module.exports.handler = async (event, context, callback) => {
 
         const streamRecord = AWS.DynamoDB.Converter.unmarshall(NewImage);
         const payload = JSON.parse(streamRecord.data);
-        if (
-          streamRecord.status === getStatus().FAILED ||
-          streamRecord.status === getStatus().SUCCESS
-        ) {
+        if (streamRecord.status !== getStatus().IN_PROGRESS) {
           continue;
         }
-        //validate the payload
-        validatePayload(payload);
 
         //ivia main api
         const iviaCSRes = await iviaCreateShipment(payload);
@@ -91,16 +86,30 @@ module.exports.handler = async (event, context, callback) => {
             .format("YYYY:MM:DD HH:mm:ss")
             .toString(),
           status: iviaCSRes.status,
+          errorMsg:
+            iviaCSRes.status === getStatus().FAILED
+              ? JSON.stringify(iviaCSRes.error)
+              : "",
+          errorReason:
+            iviaCSRes.status === getStatus().FAILED ? "IVIA API ERROR" : "",
         };
         console.log("resPayload", resPayload);
-
         //update all the response to dynamo db
         await putItem(IVIA_RESPONSE_DDB, resPayload);
 
         await updateItem(
           IVIA_DDB,
           { id: streamRecord.id },
-          { ...streamRecord, status: iviaCSRes.status }
+          {
+            ...streamRecord,
+            status: iviaCSRes.status,
+            errorMsg:
+              iviaCSRes.status === getStatus().FAILED
+                ? JSON.stringify(iviaCSRes.error)
+                : "",
+            errorReason:
+              iviaCSRes.status === getStatus().FAILED ? "IVIA API ERROR" : "",
+          }
         );
       } catch (error) {
         console.error("Error:in For loop", error);

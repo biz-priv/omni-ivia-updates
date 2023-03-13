@@ -219,8 +219,10 @@ const loadMultistopConsole = async (dynamoData, shipmentAparData) => {
     },
   };
   console.log("iviaPayload", JSON.stringify(iviaPayload));
-  const check = await validateAndCheckIfDataSentToIvia(iviaPayload, CONSOL_NO);
-  console.log("check", check);
+  const { check, errorMsg, isError } = await validateAndCheckIfDataSentToIvia(
+    iviaPayload,
+    CONSOL_NO
+  );
   if (!check) {
     //save to dynamo DB
     let houseBillList = [];
@@ -241,7 +243,9 @@ const loadMultistopConsole = async (dynamoData, shipmentAparData) => {
         .tz("America/Chicago")
         .format("YYYY:MM:DD HH:mm:ss")
         .toString(),
-      status: getStatus().IN_PROGRESS,
+      status: isError ? getStatus().FAILED : getStatus().IN_PROGRESS,
+      errorMsg: isError ? JSON.stringify(errorMsg) : "",
+      errorReason: isError ? "validation error" : "",
     };
     console.log("iviaTableData", iviaTableData);
     await putItem(IVIA_DDB, iviaTableData);
@@ -287,40 +291,61 @@ function getCargoData(shipmentDesc, ele) {
  */
 function validateAndCheckIfDataSentToIvia(payload, ConsolNo) {
   return new Promise(async (resolve, reject) => {
+    let errorMsg = validatePayload(payload);
+    console.log("errorMsg", errorMsg);
+
     try {
-      validatePayload(payload);
-    } catch (error) {
-      console.log("payload validation error", error);
-      resolve(true);
-    }
-    try {
+      //fetch from ivia table and check if data processed or not
       const params = {
         TableName: IVIA_DDB,
         IndexName: "omni-ivia-ConsolNo-index",
         KeyConditionExpression: "ConsolNo = :ConsolNo",
-        // FilterExpression: "status = :status",
         ExpressionAttributeValues: {
           ":ConsolNo": ConsolNo.toString(),
-          // ":status": getStatus().FAILED,
         },
       };
       console.log("params", params);
       const data = await ddb.query(params).promise();
-      console.log("data", data.Items.length);
+      console.log("data:ivia", data);
 
-      const latestData = data.Items.filter(
-        (e) =>
-          e.status === getStatus().SUCCESS ||
-          e.status === getStatus().IN_PROGRESS
-      );
-      if (latestData.length > 0) {
-        resolve(true);
+      if (data.Items.length > 0) {
+        //check if payload is processed or or in progress
+        const latestData = data.Items.filter(
+          (e) =>
+            e.status === getStatus().SUCCESS ||
+            e.status === getStatus().IN_PROGRESS
+        );
+        if (latestData.length > 0) {
+          resolve({ check: true, errorMsg: "", isError: false });
+        } else {
+          //check if the latest failed payload is same with upcomming payload or not.
+          let errorObj = data.Items.filter(
+            (e) => e.status === getStatus().FAILED
+          );
+          errorObj = errorObj.sort(function (x, y) {
+            return x.InsertedTimeStamp < y.InsertedTimeStamp ? 1 : -1;
+          })[0];
+
+          if (errorObj.data != JSON.stringify(payload)) {
+            if (errorMsg != "") {
+              resolve({ check: false, errorMsg: errorMsg, isError: true });
+            } else {
+              resolve({ check: false, errorMsg: "", isError: false });
+            }
+          } else {
+            resolve({ check: true, errorMsg: "", isError: false });
+          }
+        }
       } else {
-        resolve(false);
+        if (errorMsg != "") {
+          resolve({ check: false, errorMsg: errorMsg, isError: true });
+        } else {
+          resolve({ check: false, errorMsg: "", isError: false });
+        }
       }
     } catch (error) {
       console.log("dynamoError:", error);
-      resolve(false);
+      resolve({ check: false, errorMsg: "", isError: false });
     }
   });
 }

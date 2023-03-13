@@ -152,6 +152,7 @@ function validatePayload(payload) {
               specialInstructions: Joi.string().allow(""),
             }).unknown()
           )
+          .min(2)
           .required(),
         dockHigh: Joi.string().required(), // req [Y / N] default "N"
         hazardous: Joi.string().required(), // required  shipmentDesc?.Hazmat
@@ -161,12 +162,15 @@ function validatePayload(payload) {
     }).required();
 
     const { error, value } = joySchema.validate(payload);
+    console.log("", error, value);
     if (error) {
-      throw error;
+      return error.details.map((e, i) => ({ ["msg" + (i + 1)]: e.message }));
+    } else {
+      return "";
     }
   } catch (error) {
     console.log("error:validatePayload", error);
-    throw error;
+    return error;
   }
 }
 
@@ -216,6 +220,7 @@ async function getGMTDiff(dateTime, zip) {
 }
 
 /**
+ * SELECT HoursAway - iif((select top 1 state from tbl_ZipCodes where zip='10012')='AZ',6,iif(datepart(week, '2023-11-05') between 11 and 44,5,6)) FROM tbl_TimeZoneMaster where PK_TimeZoneCode=(SELECT FK_TimeZoneCode FROM tbl_TimeZoneZipCR where zipcode='10012')
  * get the timezone offset for zipcode
  * @param {*} params
  * @returns
