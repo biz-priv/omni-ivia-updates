@@ -97,20 +97,20 @@ module.exports.handler = async (event, context, callback) => {
         //update all the response to dynamo db
         await putItem(IVIA_RESPONSE_DDB, resPayload);
 
-        await updateItem(
-          IVIA_DDB,
-          { id: streamRecord.id },
-          {
-            ...streamRecord,
-            status: iviaCSRes.status,
-            errorMsg:
-              iviaCSRes.status === getStatus().FAILED
-                ? JSON.stringify(iviaCSRes.error)
-                : "",
-            errorReason:
-              iviaCSRes.status === getStatus().FAILED ? "IVIA API ERROR" : "",
-          }
-        );
+        const updatePayload = {
+          ...streamRecord,
+          status: iviaCSRes.status,
+          errorMsg:
+            iviaCSRes.status === getStatus().FAILED
+              ? JSON.stringify(iviaCSRes.error)
+              : "",
+          errorReason:
+            iviaCSRes.status === getStatus().FAILED ? "IVIA API ERROR" : "",
+        };
+        await updateItem(IVIA_DDB, { id: streamRecord.id }, updatePayload);
+        if (iviaCSRes.status === getStatus().FAILED) {
+          await sendSNSMessage(updatePayload);
+        }
       } catch (error) {
         console.error("Error:in For loop", error);
       }
