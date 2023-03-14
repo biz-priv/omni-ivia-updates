@@ -47,8 +47,6 @@ const loadP2PConsole = async (dynamoData, shipmentAparData) => {
   const shipmentDesc = dataSet.shipmentDesc;
   const shipmentAparCargo = dataSet.shipmentAparCargo;
 
-  console.log("shipmentAparCargo", JSON.stringify(shipmentAparCargo));
-
   const housebill_delimited = shipmentHeader.map((e) => e.Housebill);
 
   const cargo = shipmentDesc.map((e) => {
@@ -253,17 +251,21 @@ async function fetchDataFromTablesList(CONSOL_NO) {
       let sd = await ddb.query(sdparams).promise();
       shipmentDesc = [...shipmentDesc, ...sd.Items];
     }
+
     /**
      * fetch shipment apar for cargo from shipmentDesc fkOrderNo and seqNo
      */
+    const FK_OrderNoList = [...new Set(shipmentDesc.map((e) => e.FK_OrderNo))];
+    console.log("FK_OrderNoList for cargo", FK_OrderNoList);
+
     let shipmentAparCargo = [];
-    for (let index = 0; index < shipmentDesc.length; index++) {
-      const sdElement = shipmentDesc[index];
+    for (let index = 0; index < FK_OrderNoList.length; index++) {
+      const FK_OrderNo = FK_OrderNoList[index];
       const sapcParams = {
         TableName: SHIPMENT_APAR_TABLE,
         KeyConditionExpression: "FK_OrderNo = :FK_OrderNo",
         ExpressionAttributeValues: {
-          ":FK_OrderNo": sdElement.FK_OrderNo.toString(),
+          ":FK_OrderNo": FK_OrderNo.toString(),
         },
       };
 
