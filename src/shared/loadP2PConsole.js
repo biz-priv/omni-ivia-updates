@@ -45,6 +45,9 @@ const loadP2PConsole = async (dynamoData, shipmentAparData) => {
     dataSet.confirmationCost.length > 0 ? dataSet.confirmationCost[0] : {};
   const shipmentHeader = dataSet.shipmentHeader;
   const shipmentDesc = dataSet.shipmentDesc;
+  const shipmentAparCargo = dataSet.shipmentAparCargo;
+
+  console.log("shipmentAparCargo", JSON.stringify(shipmentAparCargo));
 
   const housebill_delimited = shipmentHeader.map((e) => e.Housebill);
 
@@ -134,7 +137,7 @@ const loadP2PConsole = async (dynamoData, shipmentAparData) => {
       stops: [pStopTypeData, dStopTypeData],
       dockHigh: "N", // req [Y / N]
       hazardous: getHazardous(shipmentDesc),
-      liftGate: getLiftGate(shipmentApar),
+      liftGate: getLiftGate(shipmentAparCargo),
       unNum: getUnNum(shipmentDesc), // accepts only 4 degit number as string
     },
   };
@@ -250,12 +253,30 @@ async function fetchDataFromTablesList(CONSOL_NO) {
       let sd = await ddb.query(sdparams).promise();
       shipmentDesc = [...shipmentDesc, ...sd.Items];
     }
+    /**
+     * fetch shipment apar for cargo from shipmentDesc fkOrderNo and seqNo
+     */
+    let shipmentAparCargo = [];
+    for (let index = 0; index < shipmentDesc.length; index++) {
+      const sdElement = shipmentDesc[index];
+      const sapcParams = {
+        TableName: SHIPMENT_APAR_TABLE,
+        KeyConditionExpression: "FK_OrderNo = :FK_OrderNo",
+        ExpressionAttributeValues: {
+          ":FK_OrderNo": sdElement.FK_OrderNo.toString(),
+        },
+      };
+
+      let sac = await ddb.query(sapcParams).promise();
+      shipmentAparCargo = [...shipmentAparCargo, ...sac.Items];
+    }
 
     return {
       shipmentApar,
       confirmationCost,
       shipmentDesc,
       shipmentHeader,
+      shipmentAparCargo,
     };
   } catch (error) {
     console.log("error", error);
