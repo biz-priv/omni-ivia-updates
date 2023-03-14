@@ -179,18 +179,20 @@ function validatePayload(payload) {
  * @param {*} dateTime
  * @returns
  */
-async function getGMTDiff(dateTime, zip) {
+async function getGMTDiff(dateTime, zip, country) {
   try {
     const moment = require("moment");
     if (
       dateTime &&
       dateTime.length > 1 &&
       moment(dateTime).isValid() &&
-      // !dateTime.includes("1970") &&
       dateTime > "1970-01-01"
     ) {
+      const zipCode =
+        country === "US" && zip.includes("-") ? zip.split("-")[0] : zip;
+
       const dateArr = dateTime.split(" ");
-      let offset = await getTimeZoneOffsetData(dateArr[0], zip);
+      let offset = await getTimeZoneOffsetData(dateArr[0], zipCode);
       if (offset <= 0) {
         let number = (offset * -1).toString();
         console.log("number", number);
@@ -208,7 +210,13 @@ async function getGMTDiff(dateTime, zip) {
         offset;
       // return momentTZ(dateStr).tz("Etc/GMT").diff("1970-01-01", "ms");
       const unixDateTime = moment(dateStr).diff("1970-01-01", "ms");
-      console.log("dateTime, zip", dateTime, zip, dateStr, unixDateTime);
+      console.log(
+        "dateTime, zipCode",
+        dateTime,
+        zipCode,
+        dateStr,
+        unixDateTime
+      );
       return unixDateTime;
     } else {
       return "";
@@ -226,74 +234,78 @@ async function getGMTDiff(dateTime, zip) {
  * @returns
  */
 async function getTimeZoneOffsetData(dateTime, zip) {
-  const ddb = new AWS.DynamoDB.DocumentClient({
-    region: process.env.REGION,
-  });
+  try {
+    const ddb = new AWS.DynamoDB.DocumentClient({
+      region: process.env.REGION,
+    });
 
-  let offSet = 0;
-  /**
-   * ZIP_CODES
-   * PK:- PK_SeqNo SK:- FK_AirportId
-   * index Zip-index  Zip
-   */
+    let offSet = 0;
+    /**
+     * ZIP_CODES
+     * PK:- PK_SeqNo SK:- FK_AirportId
+     * index Zip-index  Zip
+     */
 
-  const paramZipCode = {
-    TableName: process.env.ZIP_CODES,
-    IndexName: "Zip-index",
-    KeyConditionExpression: "Zip = :Zip",
-    ExpressionAttributeValues: {
-      ":Zip": zip.toString(),
-    },
-  };
-  let zipCodeData = await ddb.query(paramZipCode).promise();
-  zipCodeData = zipCodeData.Items.length > 0 ? zipCodeData.Items[0] : {};
-  console.log("zipCodeData", zipCodeData);
-  const state = zipCodeData.State;
-  if (state === "AZ") {
-    offSet = 6;
-  } else {
-    const cuWeek = getWeekCount(dateTime);
-    if (cuWeek >= 11 && cuWeek <= 44) {
-      offSet = 5;
-    } else {
+    const paramZipCode = {
+      TableName: process.env.ZIP_CODES,
+      IndexName: "Zip-index",
+      KeyConditionExpression: "Zip = :Zip",
+      ExpressionAttributeValues: {
+        ":Zip": zip.toString(),
+      },
+    };
+    let zipCodeData = await ddb.query(paramZipCode).promise();
+    zipCodeData = zipCodeData.Items.length > 0 ? zipCodeData.Items[0] : {};
+    console.log("zipCodeData", zipCodeData);
+    const state = zipCodeData.State;
+    if (state === "AZ") {
       offSet = 6;
+    } else {
+      const cuWeek = getWeekCount(dateTime);
+      if (cuWeek >= 11 && cuWeek <= 44) {
+        offSet = 5;
+      } else {
+        offSet = 6;
+      }
     }
+
+    /**
+     * TIMEZONE_ZIP_CR
+     * PK:- ZipCode SK:- FK_TimeZoneCode
+     */
+    const paramtimezoneCr = {
+      TableName: process.env.TIMEZONE_ZIP_CR,
+      KeyConditionExpression: "ZipCode = :ZipCode",
+      ExpressionAttributeValues: {
+        ":ZipCode": zip.toString(),
+      },
+    };
+    let timezoneCrData = await ddb.query(paramtimezoneCr).promise();
+    timezoneCrData =
+      timezoneCrData.Items.length > 0 ? timezoneCrData.Items[0] : {};
+    console.log("timezoneCrData", timezoneCrData);
+
+    /**
+     * TIMEZONE_MASTER
+     * PK:- PK_TimeZoneCode
+     */
+    const paramTimezoneMaster = {
+      TableName: process.env.TIMEZONE_MASTER,
+      KeyConditionExpression: "PK_TimeZoneCode = :PK_TimeZoneCode",
+      ExpressionAttributeValues: {
+        ":PK_TimeZoneCode": timezoneCrData.FK_TimeZoneCode,
+      },
+    };
+    let timezoneMaster = await ddb.query(paramTimezoneMaster).promise();
+    timezoneMaster =
+      timezoneMaster.Items.length > 0 ? timezoneMaster.Items[0] : {};
+    console.log("timezoneMaster", timezoneMaster);
+    offSet = parseInt(timezoneMaster.HoursAway) - offSet;
+    console.log("offSet", offSet);
+    return offSet;
+  } catch (error) {
+    return -5;
   }
-
-  /**
-   * TIMEZONE_ZIP_CR
-   * PK:- ZipCode SK:- FK_TimeZoneCode
-   */
-  const paramtimezoneCr = {
-    TableName: process.env.TIMEZONE_ZIP_CR,
-    KeyConditionExpression: "ZipCode = :ZipCode",
-    ExpressionAttributeValues: {
-      ":ZipCode": zip.toString(),
-    },
-  };
-  let timezoneCrData = await ddb.query(paramtimezoneCr).promise();
-  timezoneCrData =
-    timezoneCrData.Items.length > 0 ? timezoneCrData.Items[0] : {};
-  console.log("timezoneCrData", timezoneCrData);
-
-  /**
-   * TIMEZONE_MASTER
-   * PK:- PK_TimeZoneCode
-   */
-  const paramTimezoneMaster = {
-    TableName: process.env.TIMEZONE_MASTER,
-    KeyConditionExpression: "PK_TimeZoneCode = :PK_TimeZoneCode",
-    ExpressionAttributeValues: {
-      ":PK_TimeZoneCode": timezoneCrData.FK_TimeZoneCode,
-    },
-  };
-  let timezoneMaster = await ddb.query(paramTimezoneMaster).promise();
-  timezoneMaster =
-    timezoneMaster.Items.length > 0 ? timezoneMaster.Items[0] : {};
-  console.log("timezoneMaster", timezoneMaster);
-  offSet = parseInt(timezoneMaster.HoursAway) - offSet;
-  console.log("offSet", offSet);
-  return offSet;
 }
 
 /**
