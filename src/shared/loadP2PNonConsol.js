@@ -115,7 +115,11 @@ const loadP2PNonConsol = async (dynamoData, shipmentAparData) => {
         },
         companyName: e.ShipName,
         cargo: cargo,
-        scheduledDate: await getGMTDiff(e.PickupDateTime, e.ShipZip),
+        scheduledDate: await getGMTDiff(
+          e.PickupDateTime,
+          e.ShipZip,
+          e.FK_ShipCountry
+        ),
         specialInstructions: (
           getNotesP2Pconsols(e.PickupTimeRange, e.PickupDateTime, "p") +
           "\r\n" +
@@ -138,7 +142,11 @@ const loadP2PNonConsol = async (dynamoData, shipmentAparData) => {
           zip: e.ConZip,
         },
         companyName: e.ConName,
-        scheduledDate: await getGMTDiff(e.DeliveryDateTime, e.ConZip),
+        scheduledDate: await getGMTDiff(
+          e.DeliveryDateTime,
+          e.ConZip,
+          e.FK_ConCountry
+        ),
         specialInstructions: (
           getNotesP2Pconsols(e.DeliveryTimeRange, e.DeliveryDateTime, "d") +
           "\r\n" +

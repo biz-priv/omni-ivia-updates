@@ -195,7 +195,8 @@ const loadMultistopConsole = async (dynamoData, shipmentAparData) => {
         ...element,
         scheduledDate: await getGMTDiff(
           element.scheduledDate,
-          element.address.zip
+          element.address.zip,
+          element.address.country
         ),
       },
     ];

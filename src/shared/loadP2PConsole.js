@@ -82,7 +82,8 @@ const loadP2PConsole = async (dynamoData, shipmentAparData) => {
     cargo: cargo,
     scheduledDate: await getGMTDiff(
       confirmationCost?.PickupDateTime ?? "",
-      confirmationCost?.ShipZip ?? ""
+      confirmationCost?.ShipZip ?? "",
+      confirmationCost?.FK_ShipCountry
     ),
     specialInstructions: (
       getNotesP2Pconsols(
@@ -109,7 +110,8 @@ const loadP2PConsole = async (dynamoData, shipmentAparData) => {
     companyName: confirmationCost?.ConName ?? "",
     scheduledDate: await getGMTDiff(
       confirmationCost?.DeliveryDateTime ?? "",
-      confirmationCost?.ConZip ?? ""
+      confirmationCost?.ConZip ?? "",
+      confirmationCost?.FK_ConCountry
     ),
     specialInstructions: (
       getNotesP2Pconsols(
