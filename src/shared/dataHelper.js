@@ -391,30 +391,37 @@ function getWeekCount(date) {
 }
 
 function getNotesP2Pconsols(range, datetime, type) {
-  const moment = require("moment");
-  let msg = "";
-  if (type === "p") {
-    if (range > datetime) {
-      msg =
-        "Pickup between " +
-        moment(datetime).format("HH:mm") +
-        " and " +
-        moment(range).format("HH:mm");
+  try {
+    const moment = require("moment");
+    const pickupOrDelRangeTime = range.split(" ")[1];
+    const pickupOrDelDateTime = datetime.split(" ")[1];
+    let msg = "";
+    if (type === "p") {
+      if (pickupOrDelRangeTime > pickupOrDelDateTime) {
+        msg =
+          "Pickup between " +
+          moment(datetime).format("HH:mm") +
+          " and " +
+          moment(range).format("HH:mm");
+      } else {
+        msg = "Pickup at " + moment(datetime).format("HH:mm");
+      }
     } else {
-      msg = "Pickup at " + moment(datetime).format("HH:mm");
+      if (pickupOrDelRangeTime > pickupOrDelDateTime) {
+        msg =
+          "Deliver between " +
+          moment(datetime).format("HH:mm") +
+          " and " +
+          moment(range).format("HH:mm");
+      } else {
+        msg = "Deliver at " + moment(datetime).format("HH:mm");
+      }
     }
-  } else {
-    if (range > datetime) {
-      msg =
-        "Deliver between " +
-        moment(datetime).format("HH:mm") +
-        " and " +
-        moment(range).format("HH:mm");
-    } else {
-      msg = "Deliver at " + moment(datetime).format("HH:mm");
-    }
+    return msg;
+  } catch (error) {
+    console.log("getNotesP2Pconsols:error", error);
+    return "";
   }
-  return msg;
 }
 
 /**
