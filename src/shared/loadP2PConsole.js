@@ -41,7 +41,8 @@ const loadP2PConsole = async (dynamoData, shipmentAparData) => {
   console.log("dataSet", JSON.stringify(dataSet));
 
   const shipmentApar = dataSet.shipmentApar;
-  const confirmationCost = dataSet.confirmationCost;
+  const confirmationCost =
+    dataSet.confirmationCost.length > 0 ? dataSet.confirmationCost[0] : {};
   const shipmentHeader = dataSet.shipmentHeader;
   const shipmentDesc = dataSet.shipmentDesc;
 
@@ -70,23 +71,27 @@ const loadP2PConsole = async (dynamoData, shipmentAparData) => {
     stopNum: 0,
     housebills: housebill_delimited,
     address: {
-      address1: confirmationCost[0].ShipAddress1,
-      address2: confirmationCost[0].ShipAddress2,
-      city: confirmationCost[0].ShipCity,
-      country: confirmationCost[0].FK_ShipCountry,
-      state: confirmationCost[0].FK_ShipState,
-      zip: confirmationCost[0].ShipZip,
+      address1: confirmationCost?.ShipAddress1 ?? "",
+      address2: confirmationCost?.ShipAddress2 ?? "",
+      city: confirmationCost?.ShipCity ?? "",
+      country: confirmationCost?.FK_ShipCountry ?? "",
+      state: confirmationCost?.FK_ShipState ?? "",
+      zip: confirmationCost?.ShipZip ?? "",
     },
-    companyName: confirmationCost[0].ShipName,
+    companyName: confirmationCost?.ShipName ?? "",
     cargo: cargo,
     scheduledDate: await getGMTDiff(
-      confirmationCost[0].PickupDateTime,
-      confirmationCost[0].ShipZip
+      confirmationCost?.PickupDateTime ?? "",
+      confirmationCost?.ShipZip ?? ""
     ),
     specialInstructions: (
-      getNotesP2Pconsols(e.PickupTimeRange, e.PickupDateTime, "p") +
-      "\r\n" +
-      e.PickupNote
+      getNotesP2Pconsols(
+        confirmationCost?.PickupTimeRange ?? "",
+        confirmationCost?.PickupDateTime ?? "",
+        "p"
+      ) +
+        "\r\n" +
+        confirmationCost?.PickupNote ?? ""
     ).slice(0, 200),
   };
   const dStopTypeData = {
@@ -94,22 +99,26 @@ const loadP2PConsole = async (dynamoData, shipmentAparData) => {
     stopNum: 1,
     housebills: housebill_delimited,
     address: {
-      address1: confirmationCost[0].ConAddress1,
-      address2: confirmationCost[0].ConAddress2,
-      city: confirmationCost[0].ConCity,
-      country: confirmationCost[0].FK_ConCountry,
-      state: confirmationCost[0].FK_ConState,
-      zip: confirmationCost[0].ConZip,
+      address1: confirmationCost?.ConAddress1 ?? "",
+      address2: confirmationCost?.ConAddress2 ?? "",
+      city: confirmationCost?.ConCity ?? "",
+      country: confirmationCost?.FK_ConCountry ?? "",
+      state: confirmationCost?.FK_ConState ?? "",
+      zip: confirmationCost?.ConZip ?? "",
     },
-    companyName: confirmationCost[0].ConName,
+    companyName: confirmationCost?.ConName ?? "",
     scheduledDate: await getGMTDiff(
-      confirmationCost[0].DeliveryDateTime,
-      confirmationCost[0].ConZip
+      confirmationCost?.DeliveryDateTime ?? "",
+      confirmationCost?.ConZip ?? ""
     ),
     specialInstructions: (
-      getNotesP2Pconsols(e.DeliveryTimeRange, e.DeliveryDateTime, "d") +
+      getNotesP2Pconsols(
+        confirmationCost?.DeliveryTimeRange,
+        confirmationCost?.DeliveryDateTime,
+        "d"
+      ) +
       "\r\n" +
-      e.DeliveryNote
+      confirmationCost?.DeliveryNote
     ).slice(0, 200),
   };
 
