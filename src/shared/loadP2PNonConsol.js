@@ -56,6 +56,7 @@ const loadP2PNonConsol = async (dynamoData, shipmentAparData) => {
     (e) => e.ConsolNo === "0"
   );
   const shipmentHeader = dataSet.shipmentHeader;
+  const shipmentAparCargo = dataSet.shipmentAparCargo;
 
   // pick data from shipment_desc based on consol no = 0
   const shipmentDesc = dataSet.shipmentDesc.filter((e) => e.ConsolNo === "0");
@@ -171,7 +172,7 @@ const loadP2PNonConsol = async (dynamoData, shipmentAparData) => {
       stops: [...pStopTypeData, ...dStopTypeData],
       dockHigh: "N", // req [Y / N]
       hazardous: getHazardous(filteredSH),
-      liftGate: getLiftGate(shipmentApar),
+      liftGate: getLiftGate(shipmentAparCargo),
       unNum: getUnNum(filteredSH), // accepts only 4 degit number as string
     },
   };
@@ -376,6 +377,30 @@ async function fetchDataFromTables(tableList, primaryKeyValue) {
       newObj[objKey] = e[objKey];
     });
 
+    /**
+     * fetch shipment apar for cargo from shipmentDesc fkOrderNo and seqNo
+     */
+    const FK_OrderNoList = [
+      ...new Set(newObj.shipmentDesc.map((e) => e.FK_OrderNo)),
+    ];
+    console.log("FK_OrderNoList for cargo", FK_OrderNoList);
+
+    let shipmentAparCargo = [];
+    for (let index = 0; index < FK_OrderNoList.length; index++) {
+      const FK_OrderNo = FK_OrderNoList[index];
+      const sapcParams = {
+        TableName: SHIPMENT_APAR_TABLE,
+        KeyConditionExpression: "FK_OrderNo = :FK_OrderNo",
+        ExpressionAttributeValues: {
+          ":FK_OrderNo": FK_OrderNo.toString(),
+        },
+      };
+
+      let sac = await ddb.query(sapcParams).promise();
+      shipmentAparCargo = [...shipmentAparCargo, ...sac.Items];
+    }
+    console.log("shipmentAparCargo", shipmentAparCargo);
+    newObj.shipmentAparCargo = shipmentAparCargo;
     return newObj;
   } catch (error) {
     console.log("error:fetchDataFromTables", error);
