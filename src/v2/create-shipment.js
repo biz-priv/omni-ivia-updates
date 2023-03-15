@@ -32,10 +32,14 @@ module.exports.handler = async (event, context, callback) => {
         if (!data[index].dynamodb.hasOwnProperty("NewImage")) {
           continue;
         }
+        //dynamo stream record from omni-ivia table
         const NewImage = data[index].dynamodb.NewImage;
 
+        //converting dynamo obj to normal js obj
         const streamRecord = AWS.DynamoDB.Converter.unmarshall(NewImage);
         const payload = JSON.parse(streamRecord.data);
+
+        //all the other status are ignored, only IN_PROGRESS go for ivia
         if (streamRecord.status !== getStatus().IN_PROGRESS) {
           continue;
         }
@@ -53,10 +57,12 @@ module.exports.handler = async (event, context, callback) => {
         ) {
           const houseBills = streamRecord.Housebill.split(",");
           console.log("houseBills", houseBills);
+
+          //sending update to WorldTrack for all housebill for the shipment id
           for (let index = 0; index < houseBills.length; index++) {
             const element = houseBills[index];
 
-            //ivia upadte xml api
+            //WT upadte xml api
             iviaXmlUpdateRes = await iviaSendUpdate(
               element,
               iviaCSRes.shipmentId
@@ -73,6 +79,7 @@ module.exports.handler = async (event, context, callback) => {
           }
         }
 
+        //preparing dynamo obj for ddb:- omni-ivia-response
         const resPayload = {
           id: uuidv4(),
           payload: streamRecord.data,
@@ -95,9 +102,14 @@ module.exports.handler = async (event, context, callback) => {
             iviaCSRes.status === getStatus().FAILED ? "IVIA API ERROR" : "",
         };
         console.log("resPayload", resPayload);
-        //update all the response to dynamo db
+
+        //add Ivia and WT responses to dynamo db
         await putItem(IVIA_RESPONSE_DDB, resPayload);
 
+        /**
+         * preparing update payload for ddb:- Omni-ivia
+         * we update the success/fail respone and error msg
+         */
         const updatePayload = {
           ...streamRecord,
           status: iviaCSRes.status,
@@ -109,6 +121,8 @@ module.exports.handler = async (event, context, callback) => {
             iviaCSRes.status === getStatus().FAILED ? "IVIA API ERROR" : "",
         };
         await updateItem(IVIA_DDB, { id: streamRecord.id }, updatePayload);
+
+        //send error msg if failed to create shipment to IVIA
         if (iviaCSRes.status === getStatus().FAILED) {
           await sendSNSMessage(updatePayload);
         }
@@ -160,7 +174,7 @@ function iviaCreateShipment(payload) {
 }
 
 /**
- * update xm api
+ * update WorlTrack XML api
  * @param {*} houseBill
  * @param {*} shipmentId
  * @returns

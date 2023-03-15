@@ -1,4 +1,11 @@
 const AWS = require("aws-sdk");
+
+/**
+ * if any sqs event is failed to process for some reason then we again sending it back to sqs,
+ * which will retry again
+ * @param {*} data
+ * @returns
+ */
 function prepareBatchFailureObj(data) {
   const batchItemFailures = data.map((e) => ({
     itemIdentifier: e.messageId,
@@ -31,9 +38,9 @@ function getLatestObjByTimeStamp(data) {
 }
 
 /**
- * get "Y" or "N" based on available lift gate
+ * if chargecode have any of this codes ["LIFT", "LIFTD", "LIFTP", "TRLPJ"] then it returns Y else N
  * @param {*} param
- * @returns
+ * @returns Y/N
  */
 function getLiftGate(param) {
   try {
@@ -57,8 +64,9 @@ function getLiftGate(param) {
 
 /**
  * getHazardous
+ * if Hazmat = Y from any of the records then it returns Y else N
  * @param {*} params
- * @returns
+ * @returns Y/N
  */
 function getHazardous(params) {
   try {
@@ -78,7 +86,7 @@ function getHazardous(params) {
 /**
  * unNum is a number with length 4 and it value should be 0001 to 3600
  * we populate this field if we have "Hazmat" = "Y"
- * example  "UN 2234 ST 1234" so we are taking 2234 as unNum
+ * example  "UN2234 ST 1234" so we are taking 2234 as unNum
  * @param {*} param
  * @returns
  */
@@ -90,11 +98,6 @@ function getUnNum(param) {
     console.log("unArr", unArr);
 
     if (unArr[0].toUpperCase().includes("UN")) {
-      // return unArr.filter((e, i) => {
-      //   return (
-      //     i <= 2 && e.length === 4 && parseInt(e) >= 1 && parseInt(e) <= 3600
-      //   );
-      // })[0];
       let unNo = unArr[0];
       unNo = unNo.slice(2, 6);
       if (unNo.length === 4 && parseInt(unNo) <= 4000) {
@@ -108,8 +111,9 @@ function getUnNum(param) {
 }
 
 /**
- * validate payload
+ * JOI validation schema
  * @param {*} payload
+ * every field is required only refNum2, specialInstructions may be empty
  */
 function validatePayload(payload) {
   const Joi = require("joi");
@@ -117,7 +121,7 @@ function validatePayload(payload) {
     const joySchema = Joi.object({
       carrierId: Joi.number().required(), //hardcode dev:- 1000025
       refNums: Joi.object({
-        refNum1: Joi.string().required(), //
+        refNum1: Joi.string().required(), // required
         refNum2: Joi.string().allow(""),
       }).required(),
       shipmentDetails: Joi.object({
@@ -125,14 +129,14 @@ function validatePayload(payload) {
           .items(
             Joi.object({
               stopType: Joi.string().required(), //hardcode P/D
-              stopNum: Joi.number().integer().required(),
-              housebills: Joi.array().min(1).required(),
+              stopNum: Joi.number().integer().required(), // required
+              housebills: Joi.array().min(1).required(), // required
               address: Joi.object({
-                address1: Joi.string().required(),
-                address2: Joi.string().allow(""),
-                city: Joi.string().required(),
+                address1: Joi.string().required(), // required
+                address2: Joi.string().allow(""), // required
+                city: Joi.string().required(), // required
                 country: Joi.string().required(), // required
-                state: Joi.string().required(),
+                state: Joi.string().required(), // required
                 zip: Joi.string().required(), // required
               }).required(),
               cargo: Joi.array().items(
@@ -147,8 +151,8 @@ function validatePayload(payload) {
                   width: Joi.number().integer().required(),
                 }).required()
               ),
-              companyName: Joi.string().required(),
-              scheduledDate: Joi.number().integer().required(), // shipment header required
+              companyName: Joi.string().required(), //required
+              scheduledDate: Joi.number().integer().required(), // required
               specialInstructions: Joi.string().allow(""),
             }).unknown()
           )
@@ -175,7 +179,7 @@ function validatePayload(payload) {
 }
 
 /**
- *
+ * returns unix timestamp based on zipcode and datetime
  * @param {*} dateTime
  * @returns
  */
@@ -323,6 +327,11 @@ function setDelay(sec) {
   });
 }
 
+/**
+ * status list for the dynamoDb tables
+ * omni-ivia and omni-ivia-response
+ * @returns
+ */
 function getStatus() {
   return {
     SUCCESS: "SUCCESS",
@@ -331,33 +340,13 @@ function getStatus() {
   };
 }
 
-// function getValidDate(date) {
-//   try {
-//     if (moment(date).isValid() && !date.includes("1970")) {
-//       return new Date(date).getTime();
-//     } else {
-//       return 0;
-//     }
-//   } catch (error) {
-//     return 0;
-//   }
-// }
-
-// function getNotes(data, type) {
-//   try {
-//     return data
-//       .filter((e) => e.Type.toUpperCase() === type.toUpperCase())
-//       .map((e) => e.Note)
-//       .join(",");
-//   } catch (error) {
-//     return "";
-//   }
-// }
-
+/**
+ * helper function to get the current week count based on date
+ * @param {*} date
+ * @returns
+ */
 function getWeekCount(date) {
   Date.prototype.getWeek = function (dowOffset) {
-    /*getWeek() was developed by Nick Baicoianu at MeanFreePath: http://www.meanfreepath.com */
-
     dowOffset = typeof dowOffset == "number" ? dowOffset : 0; //default dowOffset to zero
     var newYear = new Date(this.getFullYear(), 0, 1);
     var day = newYear.getDay() - dowOffset; //the day of week the year begins on
@@ -386,16 +375,23 @@ function getWeekCount(date) {
     }
     return weeknum;
   };
-  // console.log(new Date(date).getWeek());
   return new Date(date).getWeek();
 }
 
+/**
+ * prepare notes based on below variables
+ * @param {*} range datetime value
+ * @param {*} datetime datetime value
+ * @param {*} type p or d (p= pickup, d = delivery) type stops
+ * @returns
+ */
 function getNotesP2Pconsols(range, datetime, type) {
   try {
     const moment = require("moment");
     const pickupOrDelRangeTime = range.split(" ")[1];
     const pickupOrDelDateTime = datetime.split(" ")[1];
     let msg = "";
+    //pickup type logic
     if (type === "p") {
       if (pickupOrDelRangeTime > pickupOrDelDateTime) {
         msg =
@@ -407,6 +403,7 @@ function getNotesP2Pconsols(range, datetime, type) {
         msg = "Pickup at " + moment(datetime).format("HH:mm");
       }
     } else {
+      //delivery type logic
       if (pickupOrDelRangeTime > pickupOrDelDateTime) {
         msg =
           "Deliver between " +

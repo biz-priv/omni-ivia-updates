@@ -8,7 +8,6 @@ const {
   getStatus,
   getNotesP2Pconsols,
 } = require("./dataHelper");
-const moment = require("moment");
 const momentTZ = require("moment-timezone");
 const { v4: uuidv4 } = require("uuid");
 const { queryWithPartitionKey, queryWithIndex, putItem } = require("./dynamo");
@@ -28,27 +27,38 @@ const {
   // IVIA_CARRIER_ID,
   STAGE,
 } = process.env;
-const IVIA_CARRIER_ID = "102";
+const IVIA_CARRIER_ID = "102"; //NOTE:- for stage IVIA need to change it later
 const globalConsolIndex = "omni-ivia-ConsolNo-index-" + STAGE;
-/**
- * point to point console // send console no
- */
+
 const loadP2PConsole = async (dynamoData, shipmentAparData) => {
-  console.log("loadP2PConsole");
+  console.log("load-P2P-Console");
   const CONSOL_NO = shipmentAparData.ConsolNo;
 
+  /**
+   * get data from all the requied tables
+   * shipmentApar
+   * confirmationCost
+   * shipmentDesc
+   * shipmentHeader
+   */
   const dataSet = await fetchDataFromTablesList(CONSOL_NO);
-  console.log("dataSet", JSON.stringify(dataSet));
+  // console.log("dataSet", JSON.stringify(dataSet));
 
   const shipmentApar = dataSet.shipmentApar;
   const confirmationCost =
     dataSet.confirmationCost.length > 0 ? dataSet.confirmationCost[0] : {};
   const shipmentHeader = dataSet.shipmentHeader;
   const shipmentDesc = dataSet.shipmentDesc;
+
+  //only used for liftgate
   const shipmentAparCargo = dataSet.shipmentAparCargo;
 
+  //get all the housebill from shipmentHeader table
   const housebill_delimited = shipmentHeader.map((e) => e.Housebill);
 
+  /**
+   * preparing cargo obj form table shipmentDesc
+   */
   const cargo = shipmentDesc.map((e) => {
     return {
       packageType:
@@ -67,6 +77,9 @@ const loadP2PConsole = async (dynamoData, shipmentAparData) => {
     };
   });
 
+  /**
+   * preparing pickup type stope obj from table ConfirmationCost
+   */
   const pStopTypeData = {
     stopType: "P",
     stopNum: 0,
@@ -96,6 +109,10 @@ const loadP2PConsole = async (dynamoData, shipmentAparData) => {
         confirmationCost?.PickupNote ?? ""
     ).slice(0, 200),
   };
+
+  /**
+   * preparing delivery type stope obj from table ConfirmationCost
+   */
   const dStopTypeData = {
     stopType: "D",
     stopNum: 1,
@@ -125,11 +142,12 @@ const loadP2PConsole = async (dynamoData, shipmentAparData) => {
     ).slice(0, 200),
   };
 
+  //IVIA payload
   const iviaPayload = {
-    carrierId: IVIA_CARRIER_ID, //IVIA_CARRIER_ID = 1000025
+    carrierId: IVIA_CARRIER_ID, //IVIA_CARRIER_ID = dev 1000025 stage = 102
     refNums: {
-      refNum1: CONSOL_NO, // tbl_shipmentHeader.pk_orderNo as hwb/ tbl_confirmationCost.consolNo(if it is a consol)
-      refNum2: "", // as query filenumber value is always ""
+      refNum1: CONSOL_NO, //shipmentApar.ConsolNo
+      refNum2: "", // ignore
     },
     shipmentDetails: {
       stops: [pStopTypeData, dStopTypeData],
@@ -141,6 +159,9 @@ const loadP2PConsole = async (dynamoData, shipmentAparData) => {
   };
   console.log("iviaPayload", JSON.stringify(iviaPayload));
 
+  /**
+   * validate the payload and check if it is already processed
+   */
   const { check, errorMsg, isError } = await validateAndCheckIfDataSentToIvia(
     iviaPayload,
     CONSOL_NO
@@ -153,6 +174,8 @@ const loadP2PConsole = async (dynamoData, shipmentAparData) => {
       .map((e) => {
         houseBillList = [...houseBillList, ...e.housebills];
       });
+
+    //preparing obj for dynamoDB omni-ivia
     const iviaTableData = {
       id: uuidv4(),
       data: JSON.stringify(iviaPayload),
@@ -176,6 +199,12 @@ const loadP2PConsole = async (dynamoData, shipmentAparData) => {
   }
 };
 
+/**
+ * fetch data from the tables
+ * @param {*} tableList
+ * @param {*} primaryKeyValue
+ * @returns
+ */
 async function fetchDataFromTablesList(CONSOL_NO) {
   try {
     /**
@@ -253,7 +282,7 @@ async function fetchDataFromTablesList(CONSOL_NO) {
     }
 
     /**
-     * fetch shipment apar for cargo from shipmentDesc fkOrderNo and seqNo
+     * Fetch shipment apar for liftgate based on shipmentDesc.FK_OrderNo
      */
     const FK_OrderNoList = [...new Set(shipmentDesc.map((e) => e.FK_OrderNo))];
     console.log("FK_OrderNoList for cargo", FK_OrderNoList);
@@ -290,9 +319,11 @@ async function fetchDataFromTablesList(CONSOL_NO) {
  * validate the payload structure and check from dynamodb if the data is sent to ivia priviously.
  * @param {*} payload
  * @param {*} ConsolNo
- * @returns
+ * @returns 3 variables
+ *  1> check :- true/false  if omni-ivia don't have record with success status then false else true
+ *  2> isError: true/false if we have validation then true else false
+ *  3> errorMsg: "" if isErroris true then this variable will contain the validation error msg
  */
-
 function validateAndCheckIfDataSentToIvia(payload, ConsolNo) {
   return new Promise(async (resolve, reject) => {
     let errorMsg = validatePayload(payload);
@@ -330,7 +361,9 @@ function validateAndCheckIfDataSentToIvia(payload, ConsolNo) {
             return x.InsertedTimeStamp < y.InsertedTimeStamp ? 1 : -1;
           })[0];
 
+          //checking if the latest table payload is same with prepared payload
           if (errorObj.data != JSON.stringify(payload)) {
+            //check for if we have validation error
             if (errorMsg != "") {
               resolve({ check: false, errorMsg: errorMsg, isError: true });
             } else {
