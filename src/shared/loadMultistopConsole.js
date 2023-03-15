@@ -50,6 +50,7 @@ const loadMultistopConsole = async (dynamoData, shipmentAparData) => {
   const consolStopHeaders = dataSet.consolStopHeaders;
   const consolStopItems = dataSet.consolStopItems;
   const shipmentInstructions = dataSet.shipmentInstructions;
+  const shipmentAparCargo = dataSet.shipmentAparCargo;
 
   const ORDER_NO_LIST = shipmentApar.map((e) => e.FK_OrderNo);
 
@@ -216,7 +217,7 @@ const loadMultistopConsole = async (dynamoData, shipmentAparData) => {
       stops: sortObjByStopNo(stopsList, "stopNum"),
       dockHigh: "N", // req [Y / N]
       hazardous: getHazardous(filteredSH),
-      liftGate: getLiftGate(shipmentApar),
+      liftGate: getLiftGate(shipmentAparCargo),
       unNum: getUnNum(filteredSH), // accepts only 4 degit number as string
     },
   };
@@ -464,6 +465,27 @@ async function fetchDataFromTablesList(CONSOL_NO) {
       }
     }
 
+    /**
+     * fetch shipment apar for cargo from shipmentDesc fkOrderNo and seqNo
+     */
+    const FK_OrderNoList = [...new Set(shipmentDesc.map((e) => e.FK_OrderNo))];
+    console.log("FK_OrderNoList for cargo", FK_OrderNoList);
+
+    let shipmentAparCargo = [];
+    for (let index = 0; index < FK_OrderNoList.length; index++) {
+      const FK_OrderNo = FK_OrderNoList[index];
+      const sapcParams = {
+        TableName: SHIPMENT_APAR_TABLE,
+        KeyConditionExpression: "FK_OrderNo = :FK_OrderNo",
+        ExpressionAttributeValues: {
+          ":FK_OrderNo": FK_OrderNo.toString(),
+        },
+      };
+
+      let sac = await ddb.query(sapcParams).promise();
+      shipmentAparCargo = [...shipmentAparCargo, ...sac.Items];
+    }
+
     return {
       shipmentApar,
       shipmentInstructions,
@@ -471,6 +493,7 @@ async function fetchDataFromTablesList(CONSOL_NO) {
       shipmentDesc,
       consolStopHeaders,
       consolStopItems,
+      shipmentAparCargo,
     };
   } catch (error) {
     console.log("error", error);

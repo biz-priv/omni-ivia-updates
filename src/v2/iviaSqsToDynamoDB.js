@@ -23,10 +23,10 @@ module.exports.handler = async (event, context, callback) => {
         const dynamoData = JSON.parse(sqsItem.body);
         // const dynamoData = {
         //   ApproximateCreationDateTime: 1673976738,
-        //   Keys: { SeqNo: { S: "2" }, FK_OrderNo: { S: "4928902" } },
+        //   Keys: { SeqNo: { S: "1" }, FK_OrderNo: { S: "4931065" } },
         //   NewImage: {
         //     FK_OrderNo: {
-        //       S: "4928902",
+        //       S: "4929262",
         //     },
         //     SeqNo: {
         //       S: "2",
@@ -43,14 +43,11 @@ module.exports.handler = async (event, context, callback) => {
         //     ChargeCode: {
         //       S: "",
         //     },
-        //     Complete: {
-        //       S: "N",
-        //     },
         //     Consolidation: {
         //       S: "N",
         //     },
         //     ConsolNo: {
-        //       S: "304881",
+        //       S: "304897",
         //     },
         //     ConsolShipDateTime: {
         //       S: "1900-01-01 00:00:00.000",
@@ -59,7 +56,7 @@ module.exports.handler = async (event, context, callback) => {
         //       S: "0.00",
         //     },
         //     CreateDateTime: {
-        //       S: "2023-03-02 16:38:55.000",
+        //       S: "2023-03-13 13:50:21.000",
         //     },
         //     Currency: {
         //       S: "USD",
@@ -98,7 +95,7 @@ module.exports.handler = async (event, context, callback) => {
         //       S: "0",
         //     },
         //     FK_ConsolStationId: {
-        //       S: "OTR",
+        //       S: "PHX",
         //     },
         //     FK_ConsolStatusId: {
         //       S: "",
@@ -128,7 +125,7 @@ module.exports.handler = async (event, context, callback) => {
         //       S: "T19262",
         //     },
         //     InsertedTimeStamp: {
-        //       S: "2023:03:02 16:48:12",
+        //       S: "2023:03:13 14:38:08",
         //     },
         //     InvoiceDate: {
         //       S: "1900-01-01 00:00:00.000",
@@ -149,13 +146,13 @@ module.exports.handler = async (event, context, callback) => {
         //       S: "",
         //     },
         //     PKSeqNo: {
-        //       S: "40951426",
+        //       S: "40952455",
         //     },
         //     PostedDateTime: {
         //       S: "1900-01-01 00:00:00.000",
         //     },
         //     Quantity: {
-        //       S: "20000.000",
+        //       S: "25000.000",
         //     },
         //     Rate: {
         //       S: "0.0000",
@@ -167,7 +164,7 @@ module.exports.handler = async (event, context, callback) => {
         //       S: "1900-01-01 00:00:00.000",
         //     },
         //     RefNo: {
-        //       S: "304881",
+        //       S: "304897",
         //     },
         //     Tax: {
         //       S: "0.00",
@@ -179,7 +176,7 @@ module.exports.handler = async (event, context, callback) => {
         //       S: "wwaller",
         //     },
         //     UpdatedOn: {
-        //       S: "2023-03-02 16:47:44.000",
+        //       S: "2023-03-13 14:37:06.000",
         //     },
         //     VendorAmount: {
         //       S: "0.00",
