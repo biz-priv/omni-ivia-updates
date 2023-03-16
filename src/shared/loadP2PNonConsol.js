@@ -68,6 +68,22 @@ const loadP2PNonConsol = async (dynamoData, shipmentAparData) => {
   // pick data from shipment_desc based on consol no = 0
   const shipmentDesc = dataSet.shipmentDesc.filter((e) => e.ConsolNo === "0");
 
+  const pInsNotes = shipmentInstructions
+    .filter(
+      (si) =>
+        si.Type.toUpperCase() === "P" &&
+        si.FK_OrderNo === shipmentApar.FK_OrderNo
+    )
+    .map((ei) => ei.Note)
+    .join(" ");
+  const dInsNotes = shipmentInstructions
+    .filter(
+      (si) =>
+        si.Type.toUpperCase() === "D" &&
+        si.FK_OrderNo === shipmentApar.FK_OrderNo
+    )
+    .map((ei) => ei.Note)
+    .join(" ");
   /**
    * if con cost don't have any data then pick data from shipper and consignee
    */
@@ -81,34 +97,20 @@ const loadP2PNonConsol = async (dynamoData, shipmentAparData) => {
         shipmentApar.Consolidation === "N"
       );
     });
-    ptype = JSON.parse(JSON.stringify(data));
-    dtype = JSON.parse(JSON.stringify(data));
+    ptype = { ...data, PickupNote: data.PickupNote + "\r\n" + pInsNotes };
+    dtype = { ...data, DeliveryNote: data.DeliveryNote + "\r\n" + dInsNotes };
   } else {
     ptype = {
       ...shipper,
       PickupTimeRange: shipmentHeader?.ReadyDateTimeRange ?? "",
       PickupDateTime: shipmentHeader?.ReadyDateTime ?? "",
-      PickupNote: shipmentInstructions
-        .filter(
-          (si) =>
-            si.Type.toUpperCase() === "P" &&
-            si.FK_OrderNo === shipmentApar.FK_OrderNo
-        )
-        .map((ei) => ei.Note)
-        .join(" "),
+      PickupNote: pInsNotes,
     };
     dtype = {
       ...consignee,
       DeliveryTimeRange: shipmentHeader?.ScheduledDateTimeRange ?? "",
       DeliveryDateTime: shipmentHeader?.ScheduledDateTime ?? "",
-      DeliveryNote: shipmentInstructions
-        .filter(
-          (si) =>
-            si.Type.toUpperCase() === "D" &&
-            si.FK_OrderNo === shipmentApar.FK_OrderNo
-        )
-        .map((ei) => ei.Note)
-        .join(" "),
+      DeliveryNote: dInsNotes,
     };
   }
 
