@@ -100,7 +100,7 @@ const loadMultistopConsole = async (dynamoData, shipmentAparData) => {
   );
 
   /**
-   * p
+   * prepare the Pickup type obj from consolStopHeader
    */
   const pTypeShipmentMap = Object.keys(pTypeShipment).map((e) => {
     const ele = pTypeShipment[e];

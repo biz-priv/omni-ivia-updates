@@ -38,7 +38,7 @@ function getLatestObjByTimeStamp(data) {
 }
 
 /**
- * if chargecode have any of this codes ["LIFT", "LIFTD", "LIFTP", "TRLPJ"] then it returns Y else N
+ * if shipmentApar.chargecode have any of this codes ["LIFT", "LIFTD", "LIFTP", "TRLPJ"] then it returns Y else N
  * @param {*} param
  * @returns Y/N
  */
