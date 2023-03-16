@@ -50,6 +50,8 @@ const loadP2PNonConsol = async (dynamoData, shipmentAparData) => {
 
   const shipmentApar = shipmentAparData;
   const shipmentHeader = dataSet.shipmentHeader;
+  const consignee = dataSet.consignee.length > 0 ? dataSet.consignee[0] : {};
+  const shipper = dataSet.shipper.length > 0 ? dataSet.shipper[0] : {};
 
   //only used for liftgate
   const shipmentAparCargo = dataSet.shipmentAparCargo;
@@ -62,14 +64,35 @@ const loadP2PNonConsol = async (dynamoData, shipmentAparData) => {
   // pick data from shipment_desc based on consol no = 0
   const shipmentDesc = dataSet.shipmentDesc.filter((e) => e.ConsolNo === "0");
 
-  //filtering confirmationCost based on FK_OrderNo and SeqNo and Consolidation from table shipmentApar
-  const filteredConfirmationCost = confirmationCost.filter((e) => {
-    return (
-      e.FK_OrderNo === shipmentApar.FK_OrderNo &&
-      e.FK_SeqNo === shipmentApar.SeqNo &&
-      shipmentApar.Consolidation === "N"
-    );
-  });
+  /**
+   * if con cost don't have any data then pick data from shipper and consignee
+   */
+  let ptype, dtype;
+  if (confirmationCost.length > 0) {
+    //filtering confirmationCost based on FK_OrderNo and SeqNo and Consolidation from table shipmentApar
+    const data = confirmationCost.filter((e) => {
+      return (
+        e.FK_OrderNo === shipmentApar.FK_OrderNo &&
+        e.FK_SeqNo === shipmentApar.SeqNo &&
+        shipmentApar.Consolidation === "N"
+      );
+    });
+    ptype = JSON.parse(JSON.stringify(data));
+    dtype = JSON.parse(JSON.stringify(data));
+  } else {
+    ptype = {
+      ...shipper,
+      PickupTimeRange: shipmentHeader?.ReadyDateTimeRange ?? "",
+      PickupDateTime: shipmentHeader?.ReadyDateTime ?? "",
+      PickupNote: "",
+    };
+    dtype = {
+      ...consignee,
+      DeliveryTimeRange: shipmentHeader?.ScheduledDateTimeRange ?? "",
+      DeliveryDateTime: shipmentHeader?.ScheduledDateTime ?? "",
+      DeliveryNote: "",
+    };
+  }
 
   // NOTE:- check this one when we implement full error notification
   // exactly one shipfrom/ to address in tbl_confirmation_cost for file number
@@ -102,74 +125,125 @@ const loadP2PNonConsol = async (dynamoData, shipmentAparData) => {
     };
   });
 
+  const pStopTypeData = {
+    stopType: "P",
+    stopNum: 0,
+    housebills: housebill_delimited,
+    address: {
+      address1: ptype.ShipAddress1,
+      address2: ptype.ShipAddress2,
+      city: ptype.ShipCity,
+      country: ptype.FK_ShipCountry,
+      state: ptype.FK_ShipState,
+      zip: ptype.ShipZip,
+    },
+    companyName: ptype.ShipName,
+    cargo: cargo,
+    scheduledDate: await getGMTDiff(
+      ptype.PickupDateTime,
+      ptype.ShipZip,
+      ptype.FK_ShipCountry
+    ),
+    specialInstructions: (
+      getNotesP2Pconsols(ptype.PickupTimeRange, ptype.PickupDateTime, "p") +
+      "\r\n" +
+      ptype.PickupNote
+    ).slice(0, 200),
+  };
+
+  const dStopTypeData = {
+    stopType: "D",
+    stopNum: 1,
+    housebills: housebill_delimited,
+    address: {
+      address1: dtype.ConAddress1,
+      address2: dtype.ConAddress2,
+      city: dtype.ConCity,
+      country: dtype.FK_ConCountry,
+      state: dtype.FK_ConState,
+      zip: dtype.ConZip,
+    },
+    companyName: dtype.ConName,
+    scheduledDate: await getGMTDiff(
+      dtype.DeliveryDateTime,
+      dtype.ConZip,
+      dtype.FK_ConCountry
+    ),
+    specialInstructions: (
+      getNotesP2Pconsols(dtype.DeliveryTimeRange, dtype.DeliveryDateTime, "d") +
+      "\r\n" +
+      dtype.DeliveryNote
+    ).slice(0, 200),
+  };
+
   /**
    * preparing pickup type and delivery type stopes obj from table ConfirmationCost
    */
-  const fcc = JSON.parse(JSON.stringify(filteredConfirmationCost));
-  let pStopTypeData = [],
-    dStopTypeData = [];
-  for (let index = 0; index < fcc.length; index++) {
-    const e = fcc[index];
+  // const fcc = JSON.parse(JSON.stringify(filteredConfirmationCost));
+  // let pStopTypeData = [],
+  //   dStopTypeData = [];
+  // for (let index = 0; index < fcc.length; index++) {
+  //   const e = fcc[index];
 
-    //pickup type stopes
-    pStopTypeData = [
-      ...pStopTypeData,
-      {
-        stopType: "P",
-        stopNum: 0,
-        housebills: housebill_delimited,
-        address: {
-          address1: e.ShipAddress1,
-          address2: e.ShipAddress2,
-          city: e.ShipCity,
-          country: e.FK_ShipCountry,
-          state: e.FK_ShipState,
-          zip: e.ShipZip,
-        },
-        companyName: e.ShipName,
-        cargo: cargo,
-        scheduledDate: await getGMTDiff(
-          e.PickupDateTime,
-          e.ShipZip,
-          e.FK_ShipCountry
-        ),
-        specialInstructions: (
-          getNotesP2Pconsols(e.PickupTimeRange, e.PickupDateTime, "p") +
-          "\r\n" +
-          e.PickupNote
-        ).slice(0, 200),
-      },
-    ];
+  //   pickup type stopes
+  //   pStopTypeData = [
+  //     ...pStopTypeData,
+  //     {
+  //       stopType: "P",
+  //       stopNum: 0,
+  //       housebills: housebill_delimited,
+  //       address: {
+  //         address1: e.ShipAddress1,
+  //         address2: e.ShipAddress2,
+  //         city: e.ShipCity,
+  //         country: e.FK_ShipCountry,
+  //         state: e.FK_ShipState,
+  //         zip: e.ShipZip,
+  //       },
+  //       companyName: e.ShipName,
+  //       cargo: cargo,
+  //       scheduledDate: await getGMTDiff(
+  //         e.PickupDateTime,
+  //         e.ShipZip,
+  //         e.FK_ShipCountry
+  //       ),
+  //       specialInstructions: (
+  //         getNotesP2Pconsols(e.PickupTimeRange, e.PickupDateTime, "p") +
+  //         "\r\n" +
+  //         e.PickupNote
+  //       ).slice(0, 200),
+  //     },
+  //   ];
 
-    //delivery type stopes
-    dStopTypeData = [
-      ...dStopTypeData,
-      {
-        stopType: "D",
-        stopNum: 1,
-        housebills: housebill_delimited,
-        address: {
-          address1: e.ConAddress1,
-          address2: e.ConAddress2,
-          city: e.ConCity,
-          country: e.FK_ConCountry,
-          state: e.FK_ConState,
-          zip: e.ConZip,
-        },
-        companyName: e.ConName,
-        scheduledDate: await getGMTDiff(
-          e.DeliveryDateTime,
-          e.ConZip,
-          e.FK_ConCountry
-        ),
-        specialInstructions: (
-          getNotesP2Pconsols(e.DeliveryTimeRange, e.DeliveryDateTime, "d") +
-          "\r\n" +
-          e.DeliveryNote
-        ).slice(0, 200),
-      },
-    ];
-  }
+  //   delivery type stopes
+  //   dStopTypeData = [
+  //     ...dStopTypeData,
+  //     {
+  //       stopType: "D",
+  //       stopNum: 1,
+  //       housebills: housebill_delimited,
+  //       address: {
+  //         address1: e.ConAddress1,
+  //         address2: e.ConAddress2,
+  //         city: e.ConCity,
+  //         country: e.FK_ConCountry,
+  //         state: e.FK_ConState,
+  //         zip: e.ConZip,
+  //       },
+  //       companyName: e.ConName,
+  //       scheduledDate: await getGMTDiff(
+  //         e.DeliveryDateTime,
+  //         e.ConZip,
+  //         e.FK_ConCountry
+  //       ),
+  //       specialInstructions: (
+  //         getNotesP2Pconsols(e.DeliveryTimeRange, e.DeliveryDateTime, "d") +
+  //         "\r\n" +
+  //         e.DeliveryNote
+  //       ).slice(0, 200),
+  //     },
+  //   ];
+  // }
 
   /**
    * filtered shipmentDesc data based on shipmentApar.FK_OrderNo to get hazardous and unNum
@@ -204,6 +278,9 @@ const loadP2PNonConsol = async (dynamoData, shipmentAparData) => {
     shipmentApar
   );
   if (!check) {
+    if (isError) {
+      await sendSNSMessage(iviaTableData);
+    }
     //save to dynamo DB
     let houseBillList = [];
     iviaPayload.shipmentDetails.stops
@@ -230,9 +307,6 @@ const loadP2PNonConsol = async (dynamoData, shipmentAparData) => {
     };
     console.log("iviaTableData", iviaTableData);
     await putItem(IVIA_DDB, iviaTableData);
-    if (isError) {
-      await sendSNSMessage(iviaTableData);
-    }
   } else {
     console.log("Already sent to IVIA or validation error");
   }
@@ -346,6 +420,18 @@ function getTablesAndPrimaryKey(tableName, dynamoData) {
         sortName: "confirmationCost",
         indexKeyColumnName: "FK_OrderNo",
         indexKeyName: CONFIRMATION_COST_INDEX_KEY_NAME, //omni-wt-confirmation-cost-orderNo-index-{stage}
+        type: "INDEX",
+      },
+      [CONSIGNEE_TABLE]: {
+        PK: "FK_ConOrderNo",
+        SK: "",
+        sortName: "consignee",
+        type: "INDEX",
+      },
+      [SHIPPER_TABLE]: {
+        PK: "FK_ShipOrderNo",
+        SK: "",
+        sortName: "shipper",
         type: "INDEX",
       },
     };

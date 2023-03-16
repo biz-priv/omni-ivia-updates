@@ -167,6 +167,9 @@ const loadP2PConsole = async (dynamoData, shipmentAparData) => {
     CONSOL_NO
   );
   if (!check) {
+    if (isError) {
+      await sendSNSMessage(iviaTableData);
+    }
     //save to dynamo DB
     let houseBillList = [];
     iviaPayload.shipmentDetails.stops
@@ -193,9 +196,6 @@ const loadP2PConsole = async (dynamoData, shipmentAparData) => {
     };
     console.log("iviaTableData", iviaTableData);
     await putItem(IVIA_DDB, iviaTableData);
-    if (isError) {
-      await sendSNSMessage(iviaTableData);
-    }
   }
 };
 
