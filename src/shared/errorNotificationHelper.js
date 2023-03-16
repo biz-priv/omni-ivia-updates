@@ -1,5 +1,8 @@
 const AWS = require("aws-sdk");
-
+/**
+ * sns publish function
+ * @param {*} params
+ */
 async function snsPublishMessage(params) {
   try {
     const sns = new AWS.SNS({ apiVersion: "2010-03-31" });
@@ -15,6 +18,11 @@ async function snsPublishMessage(params) {
   }
 }
 
+/**
+ * sns notification function
+ * it prepare the notification msg
+ * @param {*} data
+ */
 async function sendSNSMessage(data) {
   try {
     const snsParams = {

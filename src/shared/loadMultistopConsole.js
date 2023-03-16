@@ -30,17 +30,23 @@ const {
   // IVIA_CARRIER_ID,
   STAGE,
 } = process.env;
-const IVIA_CARRIER_ID = "102";
-
+const IVIA_CARRIER_ID = "102"; //NOTE:- for stage IVIA need to change it later
 const globalConsolIndex = "omni-ivia-ConsolNo-index-" + STAGE;
-/**
- * multistop console //non consol p2p // send console no
- */
+
 const loadMultistopConsole = async (dynamoData, shipmentAparData) => {
-  console.log("loadMultistopConsole");
+  console.log("load-Multi-stop-Console");
 
   const CONSOL_NO = shipmentAparData.ConsolNo;
 
+  /**
+   * get data from all the requied tables
+   * shipmentApar
+   * shipmentInstructions
+   * shipmentHeader
+   * shipmentDesc
+   * consolStopHeaders
+   * consolStopItems
+   */
   const dataSet = await fetchDataFromTablesList(CONSOL_NO);
   // console.log("dataSet", JSON.stringify(dataSet));
 
@@ -50,11 +56,17 @@ const loadMultistopConsole = async (dynamoData, shipmentAparData) => {
   const consolStopHeaders = dataSet.consolStopHeaders;
   const consolStopItems = dataSet.consolStopItems;
   const shipmentInstructions = dataSet.shipmentInstructions;
+
+  //only used for liftgate
   const shipmentAparCargo = dataSet.shipmentAparCargo;
 
+  //get all the FK_OrderNo from shipmentApar
   const ORDER_NO_LIST = shipmentApar.map((e) => e.FK_OrderNo);
 
   let dataArr = [];
+  /**
+   * merging consolStopItems with consolStopHeaders
+   */
   consolStopItems.map((e) => {
     const csh = consolStopHeaders
       .filter((es) => es.PK_ConsolStopId === e.FK_ConsolStopId)
@@ -68,23 +80,38 @@ const loadMultistopConsole = async (dynamoData, shipmentAparData) => {
       });
     dataArr = [...dataArr, ...csh];
   });
-  // console.log("dataArr", dataArr);
 
+  /**
+   * grouping by pickup type records based on ConsolStopNumber and
+   * filtering with ConsolStopPickupOrDelivery === "false"
+   */
   const pTypeShipment = groupBy(
     dataArr.filter((e) => e.ConsolStopPickupOrDelivery === "false"),
     "ConsolStopNumber"
   );
 
+  /**
+   * grouping by delivery type records based on ConsolStopNumber and
+   * filtering with ConsolStopPickupOrDelivery === "true"
+   */
   const dTypeShipment = groupBy(
     dataArr.filter((e) => e.ConsolStopPickupOrDelivery === "true"),
     "ConsolStopNumber"
   );
 
+  /**
+   * prepare the Pickup type obj from consolStopHeader
+   */
   const pTypeShipmentMap = Object.keys(pTypeShipment).map((e) => {
     const ele = pTypeShipment[e];
     const csh = ele[0];
+
+    /**
+     * preparing cargo obj form table shipmentDesc
+     */
     const cargo = getCargoData(shipmentDesc, ele);
-    // Notes
+
+    // prepare notes from shipmentInstructions
     const sInsNotes = shipmentInstructions
       .filter(
         (si) =>
@@ -92,6 +119,11 @@ const loadMultistopConsole = async (dynamoData, shipmentAparData) => {
       )
       .map((ei) => ei.Note)
       .join(" ");
+
+    /**
+     * prepare pickup notes based on consolStopHeader.ConsolStopTimeEnd
+     * and consolStopHeader.ConsolStopTimeBegin
+     */
     let spInsMsg = "Pickup ";
     spInsMsg +=
       csh.ConsolStopTimeEnd > csh.ConsolStopTimeBegin
@@ -101,10 +133,9 @@ const loadMultistopConsole = async (dynamoData, shipmentAparData) => {
           moment(csh.ConsolStopTimeEnd).format("HH:mm")
         : "at " + moment(csh.ConsolStopTimeBegin).format("HH:mm");
 
-    console.log("ConsolStopTimeEnd", csh.ConsolStopTimeEnd);
-    console.log("ConsolStopTimeBegin", csh.ConsolStopTimeBegin);
-    console.log("pTypeShipment spInsMsg", spInsMsg);
-
+    /**
+     * prepare the Pickup type obj from consolStopHeader
+     */
     const stopPayload = {
       stopType: "P",
       stopNum: e,
@@ -134,9 +165,14 @@ const loadMultistopConsole = async (dynamoData, shipmentAparData) => {
     return stopPayload;
   });
 
+  /**
+   * prepare the Delivery type obj from consolStopHeader
+   */
   const dTypeShipmentMap = Object.keys(dTypeShipment).map((e) => {
     const ele = dTypeShipment[e];
     const csh = ele[0];
+
+    // prepare notes from shipmentInstructions
     const sInsNotes = shipmentInstructions
       .filter(
         (si) =>
@@ -144,6 +180,11 @@ const loadMultistopConsole = async (dynamoData, shipmentAparData) => {
       )
       .map((ei) => ei.Note)
       .join(" ");
+
+    /**
+     * prepare Delivery notes based on consolStopHeader.ConsolStopTimeEnd
+     * and consolStopHeader.ConsolStopTimeBegin
+     */
     let spInsMsg = "Deliver ";
     spInsMsg +=
       csh.ConsolStopTimeEnd > csh.ConsolStopTimeBegin
@@ -153,9 +194,9 @@ const loadMultistopConsole = async (dynamoData, shipmentAparData) => {
           moment(csh.ConsolStopTimeEnd).format("HH:mm")
         : "at " + moment(csh.ConsolStopTimeBegin).format("HH:mm");
 
-    console.log("ConsolStopTimeEnd", csh.ConsolStopTimeEnd);
-    console.log("ConsolStopTimeBegin", csh.ConsolStopTimeBegin);
-    console.log("pTypeShipment spInsMsg", spInsMsg);
+    /**
+     * prepare the Delivery type obj from consolStopHeader
+     */
     const stopPayload = {
       stopType: "D",
       stopNum: e,
@@ -183,10 +224,15 @@ const loadMultistopConsole = async (dynamoData, shipmentAparData) => {
     };
     return stopPayload;
   });
-
+  /**
+   * merging Pickup and delivery type stopes
+   */
   const margedStops = [...pTypeShipmentMap, ...dTypeShipmentMap];
   console.log("margedStops", JSON.stringify(margedStops));
 
+  /**
+   * looping all the records and calculating the scheduledDate unix time
+   */
   let stopsList = [];
   for (let index = 0; index < margedStops.length; index++) {
     const element = margedStops[index];
@@ -203,25 +249,32 @@ const loadMultistopConsole = async (dynamoData, shipmentAparData) => {
     ];
   }
 
-  const filteredSH = shipmentDesc.filter((e) =>
+  /**
+   * filtered shipmentDesc data based on shipmentApar.FK_OrderNo to get hazardous and unNum
+   */
+  const filteredSD = shipmentDesc.filter((e) =>
     ORDER_NO_LIST.includes(e.FK_OrderNo)
   );
 
   const iviaPayload = {
     carrierId: IVIA_CARRIER_ID, // IVIA_CARRIER_ID = 1000025
     refNums: {
-      refNum1: CONSOL_NO ?? "", // tbl_shipmentHeader.pk_orderNo as hwb/ tbl_confirmationCost.consolNo(if it is a consol)
-      refNum2: "", // as query filenumber value is always "" hardcode
+      refNum1: CONSOL_NO ?? "", //shipmentApar.ConsolNo
+      refNum2: "", //ignore
     },
     shipmentDetails: {
       stops: sortObjByStopNo(stopsList, "stopNum"),
       dockHigh: "N", // req [Y / N]
-      hazardous: getHazardous(filteredSH),
+      hazardous: getHazardous(filteredSD),
       liftGate: getLiftGate(shipmentAparCargo),
-      unNum: getUnNum(filteredSH), // accepts only 4 degit number as string
+      unNum: getUnNum(filteredSD), // accepts only 4 degit number as string
     },
   };
   console.log("iviaPayload", JSON.stringify(iviaPayload));
+
+  /**
+   * validate the payload and check if it is already processed
+   */
   const { check, errorMsg, isError } = await validateAndCheckIfDataSentToIvia(
     iviaPayload,
     CONSOL_NO
@@ -235,6 +288,7 @@ const loadMultistopConsole = async (dynamoData, shipmentAparData) => {
         houseBillList = [...houseBillList, ...e.housebills];
       });
 
+    //preparing obj for dynamoDB omni-ivia
     const iviaTableData = {
       id: uuidv4(),
       data: JSON.stringify(iviaPayload),
@@ -258,6 +312,12 @@ const loadMultistopConsole = async (dynamoData, shipmentAparData) => {
   }
 };
 
+/**
+ * creates a group of data based on key
+ * @param {*} xs
+ * @param {*} key
+ * @returns
+ */
 function groupBy(xs, key) {
   return xs.reduce(function (rv, x) {
     (rv[x[key]] = rv[x[key]] || []).push(x);
@@ -266,7 +326,7 @@ function groupBy(xs, key) {
 }
 
 /**
- * cargo
+ * cargo data based on shipmentDesc table
  */
 function getCargoData(shipmentDesc, ele) {
   const fkOrderNoList = ele.map((e) => e.FK_OrderNo);
@@ -293,7 +353,10 @@ function getCargoData(shipmentDesc, ele) {
  * validate the payload structure and check from dynamodb if the data is sent to ivia priviously.
  * @param {*} payload
  * @param {*} ConsolNo
- * @returns
+ * @returns 3 variables
+ *  1> check :- true/false  if omni-ivia don't have record with success status then false else true
+ *  2> isError: true/false if we have validation then true else false
+ *  3> errorMsg: "" if isErroris true then this variable will contain the validation error msg
  */
 function validateAndCheckIfDataSentToIvia(payload, ConsolNo) {
   return new Promise(async (resolve, reject) => {
@@ -466,7 +529,7 @@ async function fetchDataFromTablesList(CONSOL_NO) {
     }
 
     /**
-     * fetch shipment apar for cargo from shipmentDesc fkOrderNo and seqNo
+     * Fetch shipment apar for liftgate based on shipmentDesc.FK_OrderNo
      */
     const FK_OrderNoList = [...new Set(shipmentDesc.map((e) => e.FK_OrderNo))];
     console.log("FK_OrderNoList for cargo", FK_OrderNoList);
