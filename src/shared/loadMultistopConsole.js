@@ -280,9 +280,6 @@ const loadMultistopConsole = async (dynamoData, shipmentAparData) => {
     CONSOL_NO
   );
   if (!check) {
-    if (isError) {
-      await sendSNSMessage(iviaTableData);
-    }
     //save to dynamo DB
     let houseBillList = [];
     iviaPayload.shipmentDetails.stops
@@ -307,6 +304,9 @@ const loadMultistopConsole = async (dynamoData, shipmentAparData) => {
       errorMsg: isError ? JSON.stringify(errorMsg) : "",
       errorReason: isError ? "validation error" : "",
     };
+    if (isError) {
+      await sendSNSMessage(iviaTableData);
+    }
     console.log("iviaTableData", iviaTableData);
     await putItem(IVIA_DDB, iviaTableData);
   }
