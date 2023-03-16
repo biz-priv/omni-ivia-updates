@@ -24,6 +24,8 @@ const {
   CONFIRMATION_COST_INDEX_KEY_NAME,
   IVIA_DDB,
   IVIA_VENDOR_ID,
+  INSTRUCTIONS_TABLE,
+  INSTRUCTIONS_INDEX_KEY_NAME,
   // IVIA_CARRIER_ID,
   STAGE,
 } = process.env;
@@ -49,6 +51,7 @@ const loadP2PConsole = async (dynamoData, shipmentAparData) => {
     dataSet.confirmationCost.length > 0 ? dataSet.confirmationCost[0] : {};
   const shipmentHeader = dataSet.shipmentHeader;
   const shipmentDesc = dataSet.shipmentDesc;
+  const shipmentInstructions = dataSet.shipmentInstructions;
 
   //only used for liftgate
   const shipmentAparCargo = dataSet.shipmentAparCargo;
@@ -76,6 +79,27 @@ const loadP2PConsole = async (dynamoData, shipmentAparData) => {
       turnable: "Y", // hardcode
     };
   });
+  const FK_OrderNoListForIns = [
+    ...new Set(shipmentApar.map((e) => e.FK_OrderNo)),
+  ];
+  // prepare notes from shipmentInstructions
+  const pInsNotes = shipmentInstructions
+    .filter(
+      (si) =>
+        si.Type.toUpperCase() === "P" &&
+        FK_OrderNoListForIns.includes(si.FK_OrderNo)
+    )
+    .map((ei) => ei.Note)
+    .join(" ");
+
+  const dInsNotes = shipmentInstructions
+    .filter(
+      (si) =>
+        si.Type.toUpperCase() === "D" &&
+        FK_OrderNoListForIns.includes(si.FK_OrderNo)
+    )
+    .map((ei) => ei.Note)
+    .join(" ");
 
   /**
    * preparing pickup type stope obj from table ConfirmationCost
@@ -106,7 +130,7 @@ const loadP2PConsole = async (dynamoData, shipmentAparData) => {
         "p"
       ) +
         "\r\n" +
-        confirmationCost?.PickupNote ?? ""
+        confirmationCost?.PickupNote ?? "" + "\r\n" + pInsNotes
     ).slice(0, 200),
   };
 
@@ -137,8 +161,8 @@ const loadP2PConsole = async (dynamoData, shipmentAparData) => {
         confirmationCost?.DeliveryDateTime,
         "d"
       ) +
-      "\r\n" +
-      confirmationCost?.DeliveryNote
+        "\r\n" +
+        confirmationCost?.DeliveryNote ?? "" + "\r\n" + dInsNotes
     ).slice(0, 200),
   };
 
@@ -233,7 +257,8 @@ async function fetchDataFromTablesList(CONSOL_NO) {
     );
     let confirmationCost = [],
       shipmentDesc = [],
-      shipmentHeader = [];
+      shipmentHeader = [],
+      shipmentInstructions = [];
     for (let index = 0; index < shipmentApar.length; index++) {
       const element = shipmentApar[index];
       /**
@@ -279,6 +304,20 @@ async function fetchDataFromTablesList(CONSOL_NO) {
       };
       let sd = await ddb.query(sdparams).promise();
       shipmentDesc = [...shipmentDesc, ...sd.Items];
+
+      /**
+       * shipmentInstructions
+       */
+      const iparams = {
+        TableName: INSTRUCTIONS_TABLE,
+        IndexName: INSTRUCTIONS_INDEX_KEY_NAME,
+        KeyConditionExpression: "FK_OrderNo = :FK_OrderNo",
+        ExpressionAttributeValues: {
+          ":FK_OrderNo": element.FK_OrderNo.toString(),
+        },
+      };
+      let ins = await ddb.query(iparams).promise();
+      shipmentInstructions = [...shipmentInstructions, ...ins.Items];
     }
 
     /**
@@ -308,6 +347,7 @@ async function fetchDataFromTablesList(CONSOL_NO) {
       shipmentDesc,
       shipmentHeader,
       shipmentAparCargo,
+      shipmentInstructions,
     };
   } catch (error) {
     console.log("error", error);

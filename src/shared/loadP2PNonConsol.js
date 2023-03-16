@@ -21,8 +21,11 @@ const {
   SHIPMENT_HEADER_TABLE,
   SHIPMENT_DESC_TABLE,
   CONFIRMATION_COST,
-  CONSOL_STOP_HEADERS,
   CONFIRMATION_COST_INDEX_KEY_NAME,
+  CONSIGNEE_TABLE,
+  SHIPPER_TABLE,
+  INSTRUCTIONS_TABLE,
+  INSTRUCTIONS_INDEX_KEY_NAME,
   IVIA_DDB,
   IVIA_VENDOR_ID,
   // IVIA_CARRIER_ID,
@@ -52,6 +55,7 @@ const loadP2PNonConsol = async (dynamoData, shipmentAparData) => {
   const shipmentHeader = dataSet.shipmentHeader;
   const consignee = dataSet.consignee.length > 0 ? dataSet.consignee[0] : {};
   const shipper = dataSet.shipper.length > 0 ? dataSet.shipper[0] : {};
+  const shipmentInstructions = dataSet.shipmentInstructions;
 
   //only used for liftgate
   const shipmentAparCargo = dataSet.shipmentAparCargo;
@@ -84,13 +88,27 @@ const loadP2PNonConsol = async (dynamoData, shipmentAparData) => {
       ...shipper,
       PickupTimeRange: shipmentHeader?.ReadyDateTimeRange ?? "",
       PickupDateTime: shipmentHeader?.ReadyDateTime ?? "",
-      PickupNote: "",
+      PickupNote: shipmentInstructions
+        .filter(
+          (si) =>
+            si.Type.toUpperCase() === "P" &&
+            si.FK_OrderNo === shipmentApar.FK_OrderNo
+        )
+        .map((ei) => ei.Note)
+        .join(" "),
     };
     dtype = {
       ...consignee,
       DeliveryTimeRange: shipmentHeader?.ScheduledDateTimeRange ?? "",
       DeliveryDateTime: shipmentHeader?.ScheduledDateTime ?? "",
-      DeliveryNote: "",
+      DeliveryNote: shipmentInstructions
+        .filter(
+          (si) =>
+            si.Type.toUpperCase() === "D" &&
+            si.FK_OrderNo === shipmentApar.FK_OrderNo
+        )
+        .map((ei) => ei.Note)
+        .join(" "),
     };
   }
 
@@ -484,6 +502,28 @@ async function fetchDataFromTables(tableList, primaryKeyValue) {
       newObj[objKey] = e[objKey];
     });
 
+    /**
+     * shipmentInstructions
+     */
+    let shipmentInstructions = [];
+    const FK_OrderNoListForIns = [
+      ...new Set(newObj.shipmentApar.map((e) => e.FK_OrderNo)),
+    ];
+    for (let index = 0; index < FK_OrderNoListForIns.length; index++) {
+      const element = FK_OrderNoListForIns[index];
+
+      const iparams = {
+        TableName: INSTRUCTIONS_TABLE,
+        IndexName: INSTRUCTIONS_INDEX_KEY_NAME,
+        KeyConditionExpression: "FK_OrderNo = :FK_OrderNo",
+        ExpressionAttributeValues: {
+          ":FK_OrderNo": element.FK_OrderNo.toString(),
+        },
+      };
+      let ins = await ddb.query(iparams).promise();
+      shipmentInstructions = [...shipmentInstructions, ...ins.Items];
+    }
+    newObj.shipmentInstructions = shipmentInstructions;
     /**
      * Fetch shipment apar for liftgate based on shipmentDesc.FK_OrderNo
      */
