@@ -84,6 +84,7 @@ const loadP2PNonConsol = async (dynamoData, shipmentAparData) => {
     )
     .map((ei) => ei.Note)
     .join(" ");
+
   /**
    * if con cost don't have any data then pick data from shipper and consignee
    */
@@ -97,22 +98,32 @@ const loadP2PNonConsol = async (dynamoData, shipmentAparData) => {
         shipmentApar.Consolidation === "N"
       );
     });
-    ptype = { ...data, PickupNote: data.PickupNote + "\r\n" + pInsNotes };
-    dtype = { ...data, DeliveryNote: data.DeliveryNote + "\r\n" + dInsNotes };
+    ptype = {
+      ...data[0],
+      PickupNote: (data[0].PickupNote ?? "") + "\r\n" + pInsNotes,
+    };
+    dtype = {
+      ...data[0],
+      DeliveryNote: (data[0].DeliveryNote ?? "") + "\r\n" + dInsNotes,
+    };
   } else {
+    console.log("no cost data");
     ptype = {
       ...shipper,
-      PickupTimeRange: shipmentHeader?.ReadyDateTimeRange ?? "",
-      PickupDateTime: shipmentHeader?.ReadyDateTime ?? "",
+      PickupTimeRange: shipmentHeader?.[0]?.ReadyDateTimeRange ?? "",
+      PickupDateTime: shipmentHeader?.[0]?.ReadyDateTime ?? "",
       PickupNote: pInsNotes,
     };
     dtype = {
       ...consignee,
-      DeliveryTimeRange: shipmentHeader?.ScheduledDateTimeRange ?? "",
-      DeliveryDateTime: shipmentHeader?.ScheduledDateTime ?? "",
+      DeliveryTimeRange: shipmentHeader?.[0]?.ScheduledDateTimeRange ?? "",
+      DeliveryDateTime: shipmentHeader?.[0]?.ScheduledDateTime ?? "",
       DeliveryNote: dInsNotes,
     };
   }
+
+  console.log("ptype", ptype);
+  console.log("dtype", dtype);
 
   // NOTE:- check this one when we implement full error notification
   // exactly one shipfrom/ to address in tbl_confirmation_cost for file number
@@ -281,7 +292,7 @@ const loadP2PNonConsol = async (dynamoData, shipmentAparData) => {
       refNum2: "", //ignore
     },
     shipmentDetails: {
-      stops: [...pStopTypeData, ...dStopTypeData],
+      stops: [pStopTypeData, dStopTypeData],
       dockHigh: "N", // req [Y / N]
       hazardous: getHazardous(filteredSD),
       liftGate: getLiftGate(shipmentAparCargo),
@@ -298,9 +309,6 @@ const loadP2PNonConsol = async (dynamoData, shipmentAparData) => {
     shipmentApar
   );
   if (!check) {
-    if (isError) {
-      await sendSNSMessage(iviaTableData);
-    }
     //save to dynamo DB
     let houseBillList = [];
     iviaPayload.shipmentDetails.stops
@@ -325,6 +333,9 @@ const loadP2PNonConsol = async (dynamoData, shipmentAparData) => {
       errorMsg: isError ? JSON.stringify(errorMsg) : "",
       errorReason: isError ? "validation error" : "",
     };
+    if (isError) {
+      await sendSNSMessage(iviaTableData);
+    }
     console.log("iviaTableData", iviaTableData);
     await putItem(IVIA_DDB, iviaTableData);
   } else {
@@ -446,13 +457,13 @@ function getTablesAndPrimaryKey(tableName, dynamoData) {
         PK: "FK_ConOrderNo",
         SK: "",
         sortName: "consignee",
-        type: "INDEX",
+        type: "PRIMARY_KEY",
       },
       [SHIPPER_TABLE]: {
         PK: "FK_ShipOrderNo",
         SK: "",
         sortName: "shipper",
-        type: "INDEX",
+        type: "PRIMARY_KEY",
       },
     };
 
@@ -519,7 +530,7 @@ async function fetchDataFromTables(tableList, primaryKeyValue) {
         IndexName: INSTRUCTIONS_INDEX_KEY_NAME,
         KeyConditionExpression: "FK_OrderNo = :FK_OrderNo",
         ExpressionAttributeValues: {
-          ":FK_OrderNo": element.FK_OrderNo.toString(),
+          ":FK_OrderNo": element.toString(),
         },
       };
       let ins = await ddb.query(iparams).promise();

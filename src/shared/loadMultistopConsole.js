@@ -112,10 +112,12 @@ const loadMultistopConsole = async (dynamoData, shipmentAparData) => {
     const cargo = getCargoData(shipmentDesc, ele);
 
     // prepare notes from shipmentInstructions
+    const FK_OrderNoListIns = [...new Set(ele.map((e) => e.FK_OrderNo))];
     const sInsNotes = shipmentInstructions
       .filter(
         (si) =>
-          si.Type.toUpperCase() === "P" && si.FK_OrderNo === csh.FK_OrderNo
+          si.Type.toUpperCase() === "P" &&
+          FK_OrderNoListIns.includes(si.FK_OrderNo)
       )
       .map((ei) => ei.Note)
       .join(" ");
@@ -173,10 +175,12 @@ const loadMultistopConsole = async (dynamoData, shipmentAparData) => {
     const csh = ele[0];
 
     // prepare notes from shipmentInstructions
+    const FK_OrderNoListIns = [...new Set(ele.map((e) => e.FK_OrderNo))];
     const sInsNotes = shipmentInstructions
       .filter(
         (si) =>
-          si.Type.toUpperCase() === "D" && si.FK_OrderNo === csh.FK_OrderNo
+          si.Type.toUpperCase() === "D" &&
+          FK_OrderNoListIns.includes(si.FK_OrderNo)
       )
       .map((ei) => ei.Note)
       .join(" ");
@@ -280,9 +284,6 @@ const loadMultistopConsole = async (dynamoData, shipmentAparData) => {
     CONSOL_NO
   );
   if (!check) {
-    if (isError) {
-      await sendSNSMessage(iviaTableData);
-    }
     //save to dynamo DB
     let houseBillList = [];
     iviaPayload.shipmentDetails.stops
@@ -307,6 +308,9 @@ const loadMultistopConsole = async (dynamoData, shipmentAparData) => {
       errorMsg: isError ? JSON.stringify(errorMsg) : "",
       errorReason: isError ? "validation error" : "",
     };
+    if (isError) {
+      await sendSNSMessage(iviaTableData);
+    }
     console.log("iviaTableData", iviaTableData);
     await putItem(IVIA_DDB, iviaTableData);
   }
