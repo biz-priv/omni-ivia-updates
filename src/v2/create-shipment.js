@@ -52,7 +52,8 @@ module.exports.handler = async (event, context, callback) => {
         if (
           iviaCSRes &&
           iviaCSRes?.shipmentId &&
-          iviaCSRes.shipmentId.toString().length > 0
+          iviaCSRes.shipmentId.toString().length > 0 &&
+          process.env.STAGE.toUpperCase() != "STG"
         ) {
           const houseBills = streamRecord.Housebill.split(",");
           console.log("houseBills", houseBills);
