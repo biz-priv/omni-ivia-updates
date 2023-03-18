@@ -9,18 +9,18 @@ const { sendSNSMessage } = require("../shared/errorNotificationHelper");
 
 const {
   IVIA_DDB,
-  // IVIA_CREATE_SHIPMENT_URL,
-  // IVIA_CREATE_SHIPMENT_TOKEN,
+  IVIA_CREATE_SHIPMENT_URL, // TODO:- we have to take value from ssm parameter
+  IVIA_CREATE_SHIPMENT_TOKEN, // TODO:- we have to take value from ssm parameter
   IVIA_XML_API_USER_ID,
   IVIA_XML_API_PASS,
   IVIA_XML_UPDATE_URL,
   IVIA_RESPONSE_DDB,
 } = process.env;
 
-const IVIA_CREATE_SHIPMENT_URL =
-  "https://api-stage.stage.ivia.us/v2/shipments/uncovered";
-const IVIA_CREATE_SHIPMENT_TOKEN =
-  "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJvY2N1cnJlZF9vbiI6MTY3ODkwMTU4MDM5NCwidXNlcl9pZCI6Mzc1NCwib3JnX2lkIjo0MDE3LCJwZXJtaXNzaW9ucyI6W251bGxdLCJzY29wZSI6WyJhcGkiXSwib3Blbl9hcGlfaWQiOiJlYWI0NGM3My1mZTJlLTRmZGUtYWNiZi1jY2YwMWMyMGQzN2YiLCJvcGVuX2FwaV91c2VyX2lkIjozOTIyLCJleHAiOjI2Nzg5MDE1NzksInJlZ2lvbiI6Ik5BIiwianRpIjoiMjY3NDVkNjYtYTY4Ni00NmQwLWEzOGQtYjEwNGZkZDJmZmQzIiwiY2xpZW50X2lkIjoib3Blbi1hcGkifQ.qe1fNGPPrHYhCS6AYU44MiEJ9g78s_pLfbM5tMfai68zLZh64wirM5RkeAUDx1O1oE64pfNTnRIGhbX-zduuZo43aHnfgs4nBie06Pr6vlis7u3W4Vy8IEUwB30iYai9rp42tXkArY03WzRETvyGzQr0igU12v4NyCpEtV7JXIt7q2r5mzqZbjF-9YyAt7Ir4U-xy2-_Cf-lCaswKe2AH1kH_x9e8x_T4vNBKW4uo3T6REqR-me4PanvLkFPXtPQDQr-Sk56aefF9lPmTCum_f0A2Z_PE7dDc0WqNGMImUZcY7-62WD82cWM1eJZ9kpIalw3EqPHbMYphH8VnvOiGw";
+// const IVIA_CREATE_SHIPMENT_URL =
+//   "https://api-stage.stage.ivia.us/v2/shipments/uncovered";
+// const IVIA_CREATE_SHIPMENT_TOKEN =
+//   "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJvY2N1cnJlZF9vbiI6MTY3ODkwMTU4MDM5NCwidXNlcl9pZCI6Mzc1NCwib3JnX2lkIjo0MDE3LCJwZXJtaXNzaW9ucyI6W251bGxdLCJzY29wZSI6WyJhcGkiXSwib3Blbl9hcGlfaWQiOiJlYWI0NGM3My1mZTJlLTRmZGUtYWNiZi1jY2YwMWMyMGQzN2YiLCJvcGVuX2FwaV91c2VyX2lkIjozOTIyLCJleHAiOjI2Nzg5MDE1NzksInJlZ2lvbiI6Ik5BIiwianRpIjoiMjY3NDVkNjYtYTY4Ni00NmQwLWEzOGQtYjEwNGZkZDJmZmQzIiwiY2xpZW50X2lkIjoib3Blbi1hcGkifQ.qe1fNGPPrHYhCS6AYU44MiEJ9g78s_pLfbM5tMfai68zLZh64wirM5RkeAUDx1O1oE64pfNTnRIGhbX-zduuZo43aHnfgs4nBie06Pr6vlis7u3W4Vy8IEUwB30iYai9rp42tXkArY03WzRETvyGzQr0igU12v4NyCpEtV7JXIt7q2r5mzqZbjF-9YyAt7Ir4U-xy2-_Cf-lCaswKe2AH1kH_x9e8x_T4vNBKW4uo3T6REqR-me4PanvLkFPXtPQDQr-Sk56aefF9lPmTCum_f0A2Z_PE7dDc0WqNGMImUZcY7-62WD82cWM1eJZ9kpIalw3EqPHbMYphH8VnvOiGw";
 module.exports.handler = async (event, context, callback) => {
   try {
     console.log("event", JSON.stringify(event));
@@ -52,7 +52,8 @@ module.exports.handler = async (event, context, callback) => {
         if (
           iviaCSRes &&
           iviaCSRes?.shipmentId &&
-          iviaCSRes.shipmentId.toString().length > 0
+          iviaCSRes.shipmentId.toString().length > 0 &&
+          process.env.STAGE.toUpperCase() != "STG"
         ) {
           const houseBills = streamRecord.Housebill.split(",");
           console.log("houseBills", houseBills);
