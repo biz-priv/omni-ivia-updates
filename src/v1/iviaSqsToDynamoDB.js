@@ -20,6 +20,7 @@ const IVIA_DDB = process.env.IVIA_DDB;
 const IVIA_CARRIER_ID = process.env.IVIA_CARRIER_ID;
 
 module.exports.handler = async (event, context, callback) => {
+  return prepareBatchFailureObj([]);
   let sqsEventRecords = [];
   try {
     console.log("event", JSON.stringify(event));
