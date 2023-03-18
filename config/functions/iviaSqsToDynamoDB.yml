@@ -1,16 +1,16 @@
 ---
 function:
   name: omni-ivia-sqs-to-dynamo-db-${self:provider.stage}
-  handler: src/iviaSqsToDynamoDB.handler
+  handler: src/v2/iviaSqsToDynamoDB.handler
   memorySize: 1024
-  timeout: 90
-  provisionedConcurrency: 5
-  concurrencyAutoscaling: true
+  timeout: 300
+  # provisionedConcurrency: 5
+  # concurrencyAutoscaling: true
   layers:
     - { Ref: OmniIviaLayerLambdaLayer }
   package:
     include:
-      - "src/iviaSqsToDynamoDB.js"
+      - "src/v2/iviaSqsToDynamoDB.js"
       - "src/shared/**"
     exclude:
       - "**/*"
@@ -21,11 +21,21 @@ function:
     SHIPPER_TABLE: ${ssm:/omni-wt-rt-updates/${self:provider.stage}/shipper/ddb.tableName~true}
     SHIPMENT_DESC_TABLE: ${ssm:/omni-wt-rt-updates/${self:provider.stage}/shipment-desc/ddb.tableName~true}
     INSTRUCTIONS_TABLE: ${ssm:/omni-wt-rt-updates/${self:provider.stage}/instructions/ddb.tableName~true}
+    CONFIRMATION_COST: ${ssm:/omni-wt-rt-updates/${self:provider.stage}/confirmation-cost/ddb.tableName~true}
+    CONSOL_STOP_HEADERS: ${ssm:/omni-wt-rt-updates/${self:provider.stage}/consol-stop-headers/ddb.tableName~true}
+    CONSOL_STOP_ITEMS: ${ssm:/omni-wt-rt-updates/${self:provider.stage}/consol-stop-items/ddb.tableName~true}
+    CONFIRMATION_COST_INDEX_KEY_NAME: ${ssm:/omni-wt-rt-updates/${self:provider.stage}/confirmation-cost/ddb.orderNoIndex}
     INSTRUCTIONS_INDEX_KEY_NAME: ${ssm:/omni-wt-rt-updates/${self:provider.stage}/instructions/ddb.orderNoIndex}
     IVIA_DDB: ${ssm:/omni-ivia/${self:provider.stage}/ddb.tableName}
     IVIA_CARRIER_ID: ${ssm:/omni-ivia/${self:provider.stage}/createShipment/carrierId}
+    IVIA_VENDOR_ID: ${ssm:/omni-wt-rt-updates/${self:provider.stage}/ivia/shipmentApar/filterVendorId~true} #"T19262"
+    TIMEZONE_MASTER: ${ssm:/omni-wt-rt-updates/${self:provider.stage}/timezone-master/ddb.tableName~true}
+    TIMEZONE_ZIP_CR: ${ssm:/omni-wt-rt-updates/${self:provider.stage}/timezone-zip-cr/ddb.tableName~true}
+    ZIP_CODES: ${ssm:/omni-wt-rt-updates/${self:provider.stage}/zip-codes/ddb.tableName~true}
+    ERROR_NOTIFICATION_SNS_ARN: !Ref ErrorNotification
+
   events:
     - sqs:
         arn: ${ssm:/omni-wt-rt-updates/${self:provider.stage}/ivia/sqs.arn~true}
-        batchSize: 10
+        batchSize: 2
         functionResponseType: ReportBatchItemFailures

@@ -36,6 +36,10 @@ provider:
         - "sqs:ReceiveMessage"
         - "sqs:DeleteMessage"
       Resource: "*"
+    - Effect: "Allow"
+      Action:
+        - "sns:*"
+      Resource: !Ref ErrorNotification
   runtime: nodejs14.x
   environment:
     REGION: ${self:custom.region}
@@ -76,3 +80,5 @@ resources:
   Resources:
     IviaDynamoTable: ${file(config/dynamoDB/Ivia.yaml):IviaDynamoTable}
     IviaResponseDynamoTable: ${file(config/dynamoDB/iviaResponse.yaml):IviaResponseDynamoTable}
+
+    ErrorNotification: ${file(config/sns/errorNotificationTopicSns.yml):ErrorNotification}

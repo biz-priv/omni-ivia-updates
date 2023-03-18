@@ -4,7 +4,7 @@ const { v4: uuidv4 } = require("uuid");
 const momentTZ = require("moment-timezone");
 const { convert } = require("xmlbuilder2");
 const axios = require("axios");
-const { putItem } = require("./shared/dynamo");
+const { putItem } = require("../shared/dynamo");
 
 const IVIA_CREATE_SHIPMENT_URL = process.env.IVIA_CREATE_SHIPMENT_URL;
 const IVIA_CREATE_SHIPMENT_TOKEN = process.env.IVIA_CREATE_SHIPMENT_TOKEN;
