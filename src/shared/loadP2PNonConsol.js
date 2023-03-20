@@ -68,6 +68,8 @@ const loadP2PNonConsol = async (dynamoData, shipmentAparData) => {
   // pick data from shipment_desc based on consol no = 0
   const shipmentDesc = dataSet.shipmentDesc.filter((e) => e.ConsolNo === "0");
 
+  //fetch notes from Instructions table based on shipment_apar table  FK_OrderNo data
+  // getting pickup type notes based on Type == "P"
   const pInsNotes = shipmentInstructions
     .filter(
       (si) =>
@@ -76,6 +78,8 @@ const loadP2PNonConsol = async (dynamoData, shipmentAparData) => {
     )
     .map((ei) => ei.Note)
     .join(" ");
+
+  // getting delivery type notes based on Type == "D"
   const dInsNotes = shipmentInstructions
     .filter(
       (si) =>
@@ -86,7 +90,7 @@ const loadP2PNonConsol = async (dynamoData, shipmentAparData) => {
     .join(" ");
 
   /**
-   * if con cost don't have any data then pick data from shipper and consignee
+   * if confirmationCost don't have any data then pick data from shipper and consignee table
    */
   let ptype, dtype;
   if (confirmationCost.length > 0) {
@@ -136,7 +140,7 @@ const loadP2PNonConsol = async (dynamoData, shipmentAparData) => {
   const housebill_delimited = shipmentHeader.map((e) => e.Housebill);
 
   /**
-   * preparing cargo obj form table shipmentDesc
+   * preparing cargo obj form table shipmentDesc based on shipmentAPAR.FK_OrderNo
    */
   const cargo = shipmentDesc.map((e) => {
     return {
@@ -156,6 +160,15 @@ const loadP2PNonConsol = async (dynamoData, shipmentAparData) => {
     };
   });
 
+  /**
+   * preparing pickup type stop obj from table ConfirmationCost based on shipmentAPAR.FK_OrderNo
+   * if ConfirmationCost table don't have data then pick data from tbl_shipper and tbl_shipmentHeader table based on shipmentAPAR.FK_OrderNo
+   * and PickupTimeRange value mapped with =  tbl_shipmentHeader.ReadyDateTimeRange
+   * and PickupDateTime value mapped with = tbl_shipmentHeader.ReadyDateTime
+   * and PickupNote:- only tbl_shipmentInstructions.Note , Type = "P"
+   * scheduledDate: check getGMTDiff() function
+   * specialInstructions:- check getNotesP2Pconsols() function and added PickupNote
+   */
   const pStopTypeData = {
     stopType: "P",
     stopNum: 0,
@@ -182,6 +195,15 @@ const loadP2PNonConsol = async (dynamoData, shipmentAparData) => {
     ).slice(0, 200),
   };
 
+  /**
+   * preparing delivery type stop obj from table ConfirmationCost based on shipmentAPAR.FK_OrderNo
+   * if ConfirmationCost table don't have data then pick data from tbl_consignee and tbl_shipmentHeader table based on tbl_shipmentAPAR.FK_OrderNo
+   * and DeliveryTimeRange value mapped with =  tbl_shipmentHeader.ScheduledDateTimeRange
+   * and DeliveryDateTime value mapped with = tbl_shipmentHeader.ScheduledDateTime
+   * and DeliveryNote:- only tbl_shipmentInstructions.Note,  Type = "D"
+   * scheduledDate: check getGMTDiff() function
+   * specialInstructions:- check getNotesP2Pconsols() function and added DeliveryNote
+   */
   const dStopTypeData = {
     stopType: "D",
     stopNum: 1,
@@ -206,75 +228,6 @@ const loadP2PNonConsol = async (dynamoData, shipmentAparData) => {
       dtype.DeliveryNote
     ).slice(0, 200),
   };
-
-  /**
-   * preparing pickup type and delivery type stopes obj from table ConfirmationCost
-   */
-  // const fcc = JSON.parse(JSON.stringify(filteredConfirmationCost));
-  // let pStopTypeData = [],
-  //   dStopTypeData = [];
-  // for (let index = 0; index < fcc.length; index++) {
-  //   const e = fcc[index];
-
-  //   pickup type stopes
-  //   pStopTypeData = [
-  //     ...pStopTypeData,
-  //     {
-  //       stopType: "P",
-  //       stopNum: 0,
-  //       housebills: housebill_delimited,
-  //       address: {
-  //         address1: e.ShipAddress1,
-  //         address2: e.ShipAddress2,
-  //         city: e.ShipCity,
-  //         country: e.FK_ShipCountry,
-  //         state: e.FK_ShipState,
-  //         zip: e.ShipZip,
-  //       },
-  //       companyName: e.ShipName,
-  //       cargo: cargo,
-  //       scheduledDate: await getGMTDiff(
-  //         e.PickupDateTime,
-  //         e.ShipZip,
-  //         e.FK_ShipCountry
-  //       ),
-  //       specialInstructions: (
-  //         getNotesP2Pconsols(e.PickupTimeRange, e.PickupDateTime, "p") +
-  //         "\r\n" +
-  //         e.PickupNote
-  //       ).slice(0, 200),
-  //     },
-  //   ];
-
-  //   delivery type stopes
-  //   dStopTypeData = [
-  //     ...dStopTypeData,
-  //     {
-  //       stopType: "D",
-  //       stopNum: 1,
-  //       housebills: housebill_delimited,
-  //       address: {
-  //         address1: e.ConAddress1,
-  //         address2: e.ConAddress2,
-  //         city: e.ConCity,
-  //         country: e.FK_ConCountry,
-  //         state: e.FK_ConState,
-  //         zip: e.ConZip,
-  //       },
-  //       companyName: e.ConName,
-  //       scheduledDate: await getGMTDiff(
-  //         e.DeliveryDateTime,
-  //         e.ConZip,
-  //         e.FK_ConCountry
-  //       ),
-  //       specialInstructions: (
-  //         getNotesP2Pconsols(e.DeliveryTimeRange, e.DeliveryDateTime, "d") +
-  //         "\r\n" +
-  //         e.DeliveryNote
-  //       ).slice(0, 200),
-  //     },
-  //   ];
-  // }
 
   /**
    * filtered shipmentDesc data based on shipmentApar.FK_OrderNo to get hazardous and unNum
@@ -569,45 +522,46 @@ async function fetchDataFromTables(tableList, primaryKeyValue) {
 
 module.exports = { loadP2PNonConsol };
 
+// every field is required only refNum2, specialInstructions may be empty
 // {
-//   "carrierId": 1000025, //required** hardcode  dev:- 1000025
+//   "carrierId": 1000025, // hardcode  dev:- 1000025 stage:- 102
 //   "refNums": {
 //     "refNum1": "1234", //shipmentHeader.Housebill
-//     "refNum2": "1234" // hardcode tbl_confirmationcost.fk_orderno
+//     "refNum2": "" //
 //   },
 //   "shipmentDetails": {
 //     "stops": [
 //       {
-//         "stopType": "P", //required** hardcode P for pickup
-//         "stopNum": 0,  //required** hardcode
-//         "housebills": ["6958454"], // required** all shipmentHeader.Housebill nos where shipmentHeader.ConsolNo === "0"
+//         "stopType": "P", // hardcode P for pickup type stops
+//         "stopNum": 0,  // hardcode
+//         "housebills": ["6958454"], //  all shipmentHeader.Housebill nos where shipmentHeader.ConsolNo === "0"
 //         "address": {
 //           "address1": "1759 S linneman RD", // confirmationCost.ShipAddress1
 //           "city": "Mt Prospect", // confirmationCost.ShipCity
-//           "country": "US", // required** confirmationCost.FK_ShipCountry
+//           "country": "US", //  confirmationCost.FK_ShipCountry
 //           "state": "IL", // confirmationCost.FK_ShipState
-//           "zip": "60056" // required** confirmationCost.ShipZip
+//           "zip": "60056" //  confirmationCost.ShipZip
 //         },
 //         "companyName": "Omni Logistics", // confirmationCost.ShipName
-//         "cargo": [ // all data from shipmentDesc condition (shipmentDesc.ConsolNo === shipmentApar.ConsolNo && shipmentApar.Consolidation === "N")
+//         "cargo": [ // all data from shipmentDesc based on shipmentAPAR.FK_OrderNo list
 //           {
-//             "packageType": "", //required** shipmentDesc.FK_PieceTypeId :- "BOX" = "BOX" , "PLT" = "PAL" , other any value "PIE"
-//             "quantity": "1", //required** shipmentDesc.Pieces
+//             "packageType": "", // shipmentDesc.FK_PieceTypeId :- "BOX" = "BOX" , "PLT" = "PAL" , other any value "PIE"
+//             "quantity": "1", // shipmentDesc.Pieces
 //             "length": 68, // shipmentDesc.Length
 //             "width": 48, // shipmentDesc.Width
 //             "height": 46, // shipmentDesc.Height
-//             "weight": 353, //required** shipmentDesc.Weight
-//             "stackable": "Y", //required** hardcode
-//             "turnable": "Y" //required** hardcode
+//             "weight": 353, // shipmentDesc.Weight
+//             "stackable": "Y", // hardcode
+//             "turnable": "Y" // hardcode
 //           }
 //         ],
-//         "scheduledDate": 1637913600000, //required** total time between confirmationCost.PickupDateTime and "1970-01-01" in "ms"
-//         "specialInstructions": "" // confirmationCost.ShipAddress2 + confirmationCost.PickupNote
+//         "scheduledDate": 1637913600000, // check from code
+//         "specialInstructions": "" // check from code
 //       },
 //       {
-//         "stopType": "D", //required** hardcode D = delivery
-//         "stopNum": 1, //required** hardcode
-//         "housebills": ["6958454"], //required** same as P type
+//         "stopType": "D", // hardcode D = delivery
+//         "stopNum": 1, // hardcode
+//         "housebills": ["6958454"], // same as P type
 //         "address": {
 //           "address1": "1414 Calconhook RD", // confirmationCost.ConAddress1
 //           "city": "Sharon Hill", // confirmationCost.ConCity
@@ -616,13 +570,13 @@ module.exports = { loadP2PNonConsol };
 //           "zip": "19079" // confirmationCost.ConZip
 //         },
 //         "companyName": "Freight Force PHL", // confirmationCost.ConName
-//         "scheduledDate": 1638176400000, //required** total time between confirmationCost.DeliveryDateTime and "1970-01-01" in "ms"
-//         "specialInstructions": "" // confirmationCost.ConAddress2 + confirmationCost.DeliveryNote
+//         "scheduledDate": 1638176400000, // check from code
+//         "specialInstructions": "" // check from code
 //       }
 //     ],
-//     "dockHigh": "N", // required** [Y / N] default "N"
-//     "hazardous": "N", // required**  shipmentDesc?.Hazmat
-//     "liftGate": "N", // required** shipmentApar.ChargeCode
-//     "unNum": "" // accepts only 4 degit number as string or empty string
+//     "dockHigh": "N", //  [Y / N] default "N"
+//     "hazardous": "N", //   shipmentDesc.Hazmat
+//     "liftGate": "N", //  shipmentApar.ChargeCode
+//     "unNum": "" //shipmentDesc.Description accepts only 4 degit number as string or empty string
 //   }
 // }
