@@ -60,7 +60,7 @@ const loadP2PConsole = async (dynamoData, shipmentAparData) => {
   const housebill_delimited = shipmentHeader.map((e) => e.Housebill);
 
   /**
-   * preparing cargo obj form table shipmentDesc
+   * preparing cargo obj form table shipmentDesc based on shipmentAPAR.FK_OrderNo
    */
   const cargo = shipmentDesc.map((e) => {
     return {
@@ -82,7 +82,9 @@ const loadP2PConsole = async (dynamoData, shipmentAparData) => {
   const FK_OrderNoListForIns = [
     ...new Set(shipmentApar.map((e) => e.FK_OrderNo)),
   ];
-  // prepare notes from shipmentInstructions
+
+  //fetch notes from Instructions table based on shipment_apar table FK_OrderNo data
+  // getting pickup type notes based on Type == "P"
   const pInsNotes = shipmentInstructions
     .filter(
       (si) =>
@@ -92,6 +94,7 @@ const loadP2PConsole = async (dynamoData, shipmentAparData) => {
     .map((ei) => ei.Note)
     .join(" ");
 
+  // getting delivery type notes based on Type == "D"
   const dInsNotes = shipmentInstructions
     .filter(
       (si) =>
@@ -103,6 +106,7 @@ const loadP2PConsole = async (dynamoData, shipmentAparData) => {
 
   /**
    * preparing pickup type stope obj from table ConfirmationCost
+   * based on shipmentAPAR.FK_OrderNo and shipmentAPAR.FK_SeqNo
    */
   const pStopTypeData = {
     stopType: "P",
@@ -138,6 +142,7 @@ const loadP2PConsole = async (dynamoData, shipmentAparData) => {
 
   /**
    * preparing delivery type stope obj from table ConfirmationCost
+   * based on shipmentAPAR.FK_OrderNo and shipmentAPAR.FK_SeqNo
    */
   const dStopTypeData = {
     stopType: "D",
@@ -434,45 +439,46 @@ function validateAndCheckIfDataSentToIvia(payload, ConsolNo) {
 
 module.exports = { loadP2PConsole };
 
+// every field is required only refNum2, specialInstructions may be empty
 // {
-//   "carrierId": 1000025, //required** hardcode  dev:- 1000025
+//   "carrierId": 1000025, // hardcode  dev:- 1000025 stage:- 102
 //   "refNums": {
-//     "refNum1": "244264", //ConfirmationCost[0].ConsolNo
+//     "refNum1": "244264", //shipmentApar.ConsolNo
 //     "refNum2": "" // hardcode
 //   },
 //   "shipmentDetails": {
 //     "stops": [
 //       {
-//         "stopType": "P", //required** hardcode P for pickup
-//         "stopNum": 0,  //required** hardcode
-//         "housebills": ["6958454"], // required** shipmentHeader.Housebill (1st we take FK_OrderNo from confirmationCost where FK_SeqNo < 9999 and then we filter the Housebill from shipmentHeader table based on orderNo)
+//         "stopType": "P", // hardcode P for pickup
+//         "stopNum": 0,  // hardcode
+//         "housebills": ["6958454"], //  shipmentHeader.Housebill (1st we take FK_OrderNo from confirmationCost where FK_SeqNo < 9999 and then we filter the Housebill from shipmentHeader table based on orderNo)
 //         "address": {
 //           "address1": "1759 S linneman RD", // confirmationCost.ShipAddress1
 //           "city": "Mt Prospect", // confirmationCost.ShipCity
-//           "country": "US", // required** confirmationCost.FK_ShipCountry
+//           "country": "US", //  confirmationCost.FK_ShipCountry
 //           "state": "IL", // confirmationCost.FK_ShipState
-//           "zip": "60056" // required** confirmationCost.ShipZip
+//           "zip": "60056" //  confirmationCost.ShipZip
 //         },
 //         "companyName": "Omni Logistics", // confirmationCost.ShipName
 //         "cargo": [ // all data from shipmentDesc condition (shipmentDesc.ConsolNo === shipmentApar.ConsolNo && shipmentApar.Consolidation === "N")
 //           {
-//             "packageType": "", //required** shipmentDesc.FK_PieceTypeId :- "BOX" = "BOX" , "PLT" = "PAL" , other any value "PIE"
-//             "quantity": "1", //required** shipmentDesc.Pieces
+//             "packageType": "", // shipmentDesc.FK_PieceTypeId :- "BOX" = "BOX" , "PLT" = "PAL" , other any value "PIE"
+//             "quantity": "1", // shipmentDesc.Pieces
 //             "length": 68, // shipmentDesc.Length
 //             "width": 48, // shipmentDesc.Width
 //             "height": 46, // shipmentDesc.Height
-//             "weight": 353, //required** shipmentDesc.Weight
-//             "stackable": "Y", //required** hardcode
-//             "turnable": "Y" //required** hardcode
+//             "weight": 353, // shipmentDesc.Weight
+//             "stackable": "Y", // hardcode
+//             "turnable": "Y" // hardcode
 //           }
 //         ],
-//         "scheduledDate": 1637913600000, //required** total time between confirmationCost.PickupDateTime and "1970-01-01" in "ms"
-//         "specialInstructions": "" // confirmationCost.ShipAddress2 + confirmationCost.PickupNote
+//         "scheduledDate": 1637913600000, // check from code
+//         "specialInstructions": "" // check from code
 //       },
 //       {
-//         "stopType": "D", //required** hardcode D = delivery
-//         "stopNum": 1, //required** hardcode
-//         "housebills": ["6958454"], //required** same as P type
+//         "stopType": "D", // hardcode D = delivery
+//         "stopNum": 1, // hardcode
+//         "housebills": ["6958454"], // same as P type
 //         "address": {
 //           "address1": "1414 Calconhook RD", // confirmationCost.ConAddress1
 //           "city": "Sharon Hill", // confirmationCost.ConCity
@@ -481,13 +487,13 @@ module.exports = { loadP2PConsole };
 //           "zip": "19079" // confirmationCost.ConZip
 //         },
 //         "companyName": "Freight Force PHL", // confirmationCost.ConName
-//         "scheduledDate": 1638176400000, //required** total time between confirmationCost.DeliveryDateTime and "1970-01-01" in "ms"
-//         "specialInstructions": "" // confirmationCost.ConAddress2 + confirmationCost.DeliveryNote
+//         "scheduledDate": 1638176400000, // check from code
+//         "specialInstructions": "" // check from code
 //       }
 //     ],
-//     "dockHigh": "N", // required** [Y / N] default "N"
-//     "hazardous": "N", // required**  shipmentDesc?.Hazmat
-//     "liftGate": "N", // required** shipmentApar.ChargeCode
-//     "unNum": "" // accepts only 4 degit number as string or empty string
+//     "dockHigh": "N", //  [Y / N] default "N"
+//     "hazardous": "N", //   shipmentDesc?.Hazmat
+//     "liftGate": "N", //  shipmentApar.ChargeCode
+//     "unNum": "" // shipmentDesc.Description accepts only 4 degit number as string or empty string
 //   }
 // }
