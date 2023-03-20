@@ -15,7 +15,7 @@ function prepareBatchFailureObj(data) {
 }
 
 /**
- * if we got multiple records from one table then we are taking the latest one.
+ * Helper function to get letest record by InsertedTimeStamp
  * @param {*} data
  * @returns
  */
@@ -38,6 +38,9 @@ function getLatestObjByTimeStamp(data) {
 }
 
 /**
+ * Fetch shipmentApar data for liftgate based on shipmentDesc.FK_OrderNo list
+ * for shipmentDesc data, logic is same as function getHazardous() comments
+ *
  * if shipmentApar.chargecode have any of this codes ["LIFT", "LIFTD", "LIFTP", "TRLPJ"] then it returns Y else N
  * @param {*} param
  * @returns Y/N
@@ -63,7 +66,23 @@ function getLiftGate(param) {
 }
 
 /**
- * getHazardous
+ * p2p non consol:-
+ * from tbl_shipmentdesc where fk_orderno=[file number] and ConsolNo=0;
+ * fetch shipmentDesc data based on tbl_shipmentapar.fk_orderno
+ *
+ * p2p consol:-
+ * from tbl_shipmentdesc where fk_orderno in (select fk_orderno from tbl_shipmentapar where consolno=[consol number] and consolidation='N');
+ * fetch shipmentDesc data based on tbl_shipmentapar.fk_orderno list
+ *
+ * Multi Stop consol:-
+ * from tbl_shipmentdesc where fk_orderno in
+ * (select fk_orderno from tbl_consolstopitems where fk_consolstopid in
+ *  (select pk_consolstopid from tbl_consolstopheaders as h where h.fk_consolno=[consol number] and h.consolstopnumber=[stop number]));
+ *
+ * fetch shipmentDesc data based on tbl_consolstopitems.fk_orderno list and
+ * fetch tbl_consolstopitems data based on tbl_consolstopheaders.pk_consolstopid list and
+ * fetch tbl_consolstopheaders data based on fk_consolno=[consol number] and h.consolstopnumber=[stop number]
+ *
  * if Hazmat = Y from any of the records then it returns Y else N
  * @param {*} params
  * @returns Y/N
@@ -84,6 +103,8 @@ function getHazardous(params) {
 }
 
 /**
+ * for shipmentDesc data, logic is same as function getHazardous() comments
+ *
  * unNum is a number with length 4 and it value should be 0001 to 3600
  * we populate this field if we have "Hazmat" = "Y"
  * example  "UN2234 ST 1234" so we are taking 2234 as unNum
@@ -111,7 +132,7 @@ function getUnNum(param) {
 }
 
 /**
- * JOI validation schema
+ * JOI validation schema for all 3 scenarios
  * @param {*} payload
  * every field is required only refNum2, specialInstructions may be empty
  */
@@ -179,8 +200,28 @@ function validatePayload(payload) {
 }
 
 /**
+ * p2p non consol
+ * dateTime:-if tbl_confirmationCost have data
+ * then confirmationCost.DeliveryDateTime/confirmationCost.PickupDateTime
+ * else take data from tbl_shipmentHeader.ScheduledDateTime/tbl_shipmentHeader.ReadyDateTime
+ *
+ * zip:-if tbl_confirmationCost have data then confirmationCost.ConZip else take data from shipper/consingee [ConZip]
+ * country:-if tbl_confirmationCost have data then confirmationCost.FK_ConCountry else take data from shipper/consingee [FK_ConCountry]
+ *
+ * p2p consol
+ * dateTime:- confirmationCost.DeliveryDateTime / confirmationCost.PickupDateTime
+ * zip:- confirmationCost.ConZip
+ * country:- confirmationCost.FK_ConCountry
+ *
+ * Multistop consol
+ * dateTime:- conStopHeader.ConsolStopDate + conStopHeader.ConsolStopTimeBegin (for pickup and del both)
+ * zip:- conStopHeader.ConZip
+ * country:- conStopHeader.ConZip
+ *
+ * gets offset from getTimeZoneOffsetData() and concats it with the datetime and
  * returns unix timestamp based on zipcode and datetime
  * @param {*} dateTime
+ * @param {*} country  if country is US then we split the zip_code string on "-" and take the first element as zip_code
  * @returns
  */
 async function getGMTDiff(dateTime, zip, country) {
@@ -234,6 +275,14 @@ async function getGMTDiff(dateTime, zip, country) {
 /**
  * SELECT HoursAway - iif((select top 1 state from tbl_ZipCodes where zip='10012')='AZ',6,iif(datepart(week, '2023-11-05') between 11 and 44,5,6)) FROM tbl_TimeZoneMaster where PK_TimeZoneCode=(SELECT FK_TimeZoneCode FROM tbl_TimeZoneZipCR where zipcode='10012')
  * get the timezone offset for zipcode
+ *
+ * 1> fetch data from ZIP_CODES table based on zip_code and based on the logic if state is AZ then set offset value = 6
+ * else get the week count of the date and check if the weekCount is between 11 - 44 then set offset value = 5 else 6
+ *
+ * 2>fetch data from TIMEZONE_ZIP_CR based on zip_code take the 1st record and search on
+ * TIMEZONE_MASTER table based on TIMEZONE_ZIP_CR.FK_TimeZoneCode
+ *
+ * 3> based on query logic final value is  TIMEZONE_MASTER.HoursAway column value  - offset value
  * @param {*} params
  * @returns
  */
@@ -308,6 +357,7 @@ async function getTimeZoneOffsetData(dateTime, zip) {
     console.log("offSet", offSet);
     return offSet;
   } catch (error) {
+    //TODO:- returning -5 as default if no zip_code available on the ZIP_CODES, TIMEZONE_ZIP_CR, TIMEZONE_MASTER tables
     return -5;
   }
 }
@@ -379,6 +429,16 @@ function getWeekCount(date) {
 }
 
 /**
+ * p2p NON consol:- data based on shipmentApar.FK_OrderNo
+ * confirmationCost.PickupTimeRange confirmationCost.PickupDateTime
+ * if we dont have data on confirmationCost table then fetch from shipmentHeader table
+ * shipmentHeader.ReadyDateTimeRange , shipmentHeader.ReadyDateTime
+ *
+ * p2p consol:-  data based on shipmentApar.FK_OrderNo
+ * confirmationCost.PickupTimeRange confirmationCost.PickupDateTime
+ *
+ * it is not used for multistop consol.
+ *
  * prepare notes based on below variables
  * @param {*} range datetime value
  * @param {*} datetime datetime value

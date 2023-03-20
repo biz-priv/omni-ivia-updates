@@ -107,12 +107,13 @@ const loadMultistopConsole = async (dynamoData, shipmentAparData) => {
     const csh = ele[0];
 
     /**
-     * preparing cargo obj form table shipmentDesc
+     * preparing cargo obj form table shipmentDesc based on shipmentApar.FK_OrderNo
      */
     const cargo = getCargoData(shipmentDesc, ele);
 
-    // prepare notes from shipmentInstructions
     const FK_OrderNoListIns = [...new Set(ele.map((e) => e.FK_OrderNo))];
+    //fetch notes from Instructions table based on shipment_apar table FK_OrderNo data
+    // getting pickup type notes based on Type == "P"
     const sInsNotes = shipmentInstructions
       .filter(
         (si) =>
@@ -174,8 +175,9 @@ const loadMultistopConsole = async (dynamoData, shipmentAparData) => {
     const ele = dTypeShipment[e];
     const csh = ele[0];
 
-    // prepare notes from shipmentInstructions
     const FK_OrderNoListIns = [...new Set(ele.map((e) => e.FK_OrderNo))];
+    //fetch notes from Instructions table based on shipment_apar table FK_OrderNo data
+    // getting pickup type notes based on Type == "P"
     const sInsNotes = shipmentInstructions
       .filter(
         (si) =>
@@ -228,6 +230,7 @@ const loadMultistopConsole = async (dynamoData, shipmentAparData) => {
     };
     return stopPayload;
   });
+
   /**
    * merging Pickup and delivery type stopes
    */
@@ -330,7 +333,7 @@ function groupBy(xs, key) {
 }
 
 /**
- * cargo data based on shipmentDesc table
+ * cargo data based on shipmentDesc table based on shipmentApar.FK_OrderNo
  */
 function getCargoData(shipmentDesc, ele) {
   const fkOrderNoList = ele.map((e) => e.FK_OrderNo);
@@ -569,3 +572,63 @@ async function fetchDataFromTablesList(CONSOL_NO) {
 }
 
 module.exports = { loadMultistopConsole };
+
+// every field is required only refNum2, specialInstructions may be empty
+// {
+//   "carrierId": 1000025, // hardcode  dev:- 1000025 stage:- 102
+//   "refNums": {
+//     "refNum1": "1234", //shipmentApar.ConsolNo
+//     "refNum2": "" //hardcode
+//   },
+//   "shipmentDetails": {
+//     "stops": [
+//       {
+//         "stopType": "P", // hardcode P for pickup
+//         "stopNum": 0,  // hardcode
+//         "housebills": ["6958454"], //  all shipmentHeader.Housebill nos where shipmentHeader.ConsolNo === "0"
+//         "address": {
+//           "address1": "1759 S linneman RD", // conStopHeader.ConsolStopAddress1,
+//           "address2": "1759 S linneman RD", // conStopHeader.ConsolStopAddress2,
+//           "city": "Mt Prospect", // conStopHeader.ConsolStopCity,
+//           "country": "US", //  conStopHeader.FK_ConsolStopCountry,
+//           "state": "IL", // conStopHeader.FK_ConsolStopState,
+//           "zip": "60056" //  conStopHeader.ConsolStopZip,
+//         },
+//         "companyName": "Omni Logistics", // confirmationCost.ShipName
+//         "cargo": [ // all data from shipmentDesc based on shipmentAPAR.FK_OrderNo list
+//           {
+//             "packageType": "", // shipmentDesc.FK_PieceTypeId :- "BOX" = "BOX" , "PLT" = "PAL" , other any value "PIE"
+//             "quantity": "1", // shipmentDesc.Pieces
+//             "length": 68, // shipmentDesc.Length
+//             "width": 48, // shipmentDesc.Width
+//             "height": 46, // shipmentDesc.Height
+//             "weight": 353, // shipmentDesc.Weight
+//             "stackable": "Y", // hardcode
+//             "turnable": "Y" // hardcode
+//           }
+//         ],
+//         "scheduledDate": 1637913600000, // check from code
+//         "specialInstructions": "" // check from code
+//       },
+//       {
+//         "stopType": "D", // hardcode D = delivery
+//         "stopNum": 1, // hardcode
+//         "housebills": ["6958454"], // same as P type
+//         "address": {
+//           "address1": "1414 Calconhook RD", // conStopHeader.ConAddress1
+//           "city": "Sharon Hill", // conStopHeader.ConCity
+//           "country": "US", // conStopHeader.FK_ConCountry
+//           "state": "PA", // conStopHeader.FK_ConState
+//           "zip": "19079" // conStopHeader.ConZip
+//         },
+//         "companyName": "Freight Force PHL", // conStopHeader.ConName
+//         "scheduledDate": 1638176400000, // check from code
+//         "specialInstructions": "" // check from code
+//       }
+//     ],
+//     "dockHigh": "N", //  [Y / N] default "N"
+//     "hazardous": "N", //   shipmentDesc.Hazmat
+//     "liftGate": "N", //  shipmentApar.ChargeCode
+//     "unNum": "" // shipmentDesc.Description  accepts only 4 degit number as string or empty string
+//   }
+// }
