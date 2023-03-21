@@ -8,9 +8,9 @@ const { SHIPMENT_APAR_TABLE } = process.env; //"T19262"
 
 module.exports.handler = async (event, context, callback) => {
   //TODO:- stop stage events
-  // if (process.env.STAGE === "stg") {
-  //   return "Success";
-  // }
+  if (process.env.STAGE.toLowerCase() === "stg") {
+    return "Success";
+  }
   let sqsEventRecords = [];
   try {
     console.log("event", JSON.stringify(event));

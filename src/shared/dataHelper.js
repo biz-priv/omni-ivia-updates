@@ -140,7 +140,7 @@ function validatePayload(payload) {
   const Joi = require("joi");
   try {
     const joySchema = Joi.object({
-      carrierId: Joi.number().required(), //hardcode dev:- 1000025
+      carrierId: Joi.number().required(),
       refNums: Joi.object({
         refNum1: Joi.string().required(), // required
         refNum2: Joi.string().allow(""),
@@ -149,7 +149,7 @@ function validatePayload(payload) {
         stops: Joi.array()
           .items(
             Joi.object({
-              stopType: Joi.string().required(), //hardcode P/D
+              stopType: Joi.string().required(),
               stopNum: Joi.number().integer().required(), // required
               housebills: Joi.array().min(1).required(), // required
               address: Joi.object({
@@ -162,10 +162,10 @@ function validatePayload(payload) {
               }).required(),
               cargo: Joi.array().items(
                 Joi.object({
-                  height: Joi.number().integer().required(),
-                  length: Joi.number().integer().required(),
+                  height: Joi.number().integer().required(), // required
+                  length: Joi.number().integer().required(), // required
                   packageType: Joi.string().required(), // required
-                  quantity: Joi.number().integer().required(), //req
+                  quantity: Joi.number().integer().required(), // required
                   stackable: Joi.string().required(), // req [Y / N]
                   turnable: Joi.string().required(), // req [Y / N]
                   weight: Joi.number().integer().required(), //req
@@ -179,7 +179,7 @@ function validatePayload(payload) {
           )
           .min(2)
           .required(),
-        dockHigh: Joi.string().required(), // req [Y / N] default "N"
+        dockHigh: Joi.string().required(), // required [Y / N] default "N"
         hazardous: Joi.string().required(), // required  shipmentDesc?.Hazmat
         liftGate: Joi.string().required(), // required shipmentApar.ChargeCode
         unNum: Joi.any().allow("").required(), // accepts only 4 degit number as string
