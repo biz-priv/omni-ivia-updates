@@ -7,8 +7,10 @@ const {
   getGMTDiff,
   getStatus,
   getNotesP2Pconsols,
+  checkAddressByGoogleApi,
 } = require("./dataHelper");
 const momentTZ = require("moment-timezone");
+const moment = require("moment");
 const { v4: uuidv4 } = require("uuid");
 const { queryWithPartitionKey, queryWithIndex, putItem } = require("./dynamo");
 const { sendSNSMessage } = require("./errorNotificationHelper");
@@ -27,6 +29,7 @@ const {
   INSTRUCTIONS_TABLE,
   INSTRUCTIONS_INDEX_KEY_NAME,
   IVIA_DDB,
+  EQUIPMENT_TABLE,
   IVIA_VENDOR_ID,
   // IVIA_CARRIER_ID,
 } = process.env;
@@ -56,6 +59,7 @@ const loadP2PNonConsol = async (dynamoData, shipmentAparData) => {
   const consignee = dataSet.consignee.length > 0 ? dataSet.consignee[0] : {};
   const shipper = dataSet.shipper.length > 0 ? dataSet.shipper[0] : {};
   const shipmentInstructions = dataSet.shipmentInstructions;
+  const equipment = dataSet.equipment.length > 0 ? dataSet.equipment[0] : {};
 
   //only used for liftgate
   const shipmentAparCargo = dataSet.shipmentAparCargo;
@@ -93,38 +97,38 @@ const loadP2PNonConsol = async (dynamoData, shipmentAparData) => {
    * if confirmationCost don't have any data then pick data from shipper and consignee table
    */
   let ptype, dtype;
-  if (confirmationCost.length > 0) {
-    //filtering confirmationCost based on FK_OrderNo and SeqNo and Consolidation from table shipmentApar
-    const data = confirmationCost.filter((e) => {
-      return (
-        e.FK_OrderNo === shipmentApar.FK_OrderNo &&
-        e.FK_SeqNo === shipmentApar.SeqNo &&
-        shipmentApar.Consolidation === "N"
-      );
-    });
-    ptype = {
-      ...data[0],
-      PickupNote: (data[0].PickupNote ?? "") + "\r\n" + pInsNotes,
-    };
-    dtype = {
-      ...data[0],
-      DeliveryNote: (data[0].DeliveryNote ?? "") + "\r\n" + dInsNotes,
-    };
-  } else {
-    console.log("no cost data");
-    ptype = {
-      ...shipper,
-      PickupTimeRange: shipmentHeader?.[0]?.ReadyDateTimeRange ?? "",
-      PickupDateTime: shipmentHeader?.[0]?.ReadyDateTime ?? "",
-      PickupNote: pInsNotes,
-    };
-    dtype = {
-      ...consignee,
-      DeliveryTimeRange: shipmentHeader?.[0]?.ScheduledDateTimeRange ?? "",
-      DeliveryDateTime: shipmentHeader?.[0]?.ScheduledDateTime ?? "",
-      DeliveryNote: dInsNotes,
-    };
-  }
+  // if (confirmationCost.length > 0) {
+  //   //filtering confirmationCost based on FK_OrderNo and SeqNo and Consolidation from table shipmentApar
+  //   const data = confirmationCost.filter((e) => {
+  //     return (
+  //       e.FK_OrderNo === shipmentApar.FK_OrderNo &&
+  //       e.FK_SeqNo === shipmentApar.SeqNo &&
+  //       shipmentApar.Consolidation === "N"
+  //     );
+  //   });
+  //   ptype = {
+  //     ...data[0],
+  //     PickupNote: (data[0].PickupNote ?? "") + "\r\n" + pInsNotes,
+  //   };
+  //   dtype = {
+  //     ...data[0],
+  //     DeliveryNote: (data[0].DeliveryNote ?? "") + "\r\n" + dInsNotes,
+  //   };
+  // } else {
+  // console.log("no cost data");
+  ptype = {
+    ...shipper,
+    PickupTimeRange: shipmentHeader?.[0]?.ReadyDateTimeRange ?? "",
+    PickupDateTime: shipmentHeader?.[0]?.ReadyDateTime ?? "",
+    PickupNote: pInsNotes,
+  };
+  dtype = {
+    ...consignee,
+    DeliveryTimeRange: shipmentHeader?.[0]?.ScheduledDateTimeRange ?? "",
+    DeliveryDateTime: shipmentHeader?.[0]?.ScheduledDateTime ?? "",
+    DeliveryNote: dInsNotes,
+  };
+  // }
 
   console.log("ptype", ptype);
   console.log("dtype", dtype);
@@ -143,6 +147,13 @@ const loadP2PNonConsol = async (dynamoData, shipmentAparData) => {
    * preparing cargo obj form table shipmentDesc based on shipmentAPAR.FK_OrderNo
    */
   const cargo = shipmentDesc.map((e) => {
+    const checkIfZero =
+      parseInt(e?.Length != "" ? e?.Length : 0) +
+        parseInt(e?.Width != "" ? e?.Width : 0) +
+        parseInt(e?.Height != "" ? e?.Height : 0) ===
+      0
+        ? true
+        : false;
     return {
       packageType:
         e.FK_PieceTypeId === "BOX"
@@ -150,11 +161,11 @@ const loadP2PNonConsol = async (dynamoData, shipmentAparData) => {
           : e.FK_PieceTypeId === "PLT"
           ? "PAL"
           : "PIE",
-      quantity: e?.Pieces ?? "",
-      length: e?.Length ? parseInt(e?.Length) : "",
-      width: e?.Width ? parseInt(e?.Width) : "",
-      height: e?.Height ? parseInt(e?.Height) : "",
-      weight: e?.Weight ? parseInt(e?.Weight) : "",
+      quantity: e?.Pieces ?? 0,
+      length: checkIfZero ? 1 : parseInt(e?.Length),
+      width: checkIfZero ? 1 : parseInt(e?.Width),
+      height: checkIfZero ? 1 : parseInt(e?.Height),
+      weight: e?.Weight ? parseInt(e?.Weight) : 0,
       stackable: "Y", // hardcode
       turnable: "Y", // hardcode
     };
@@ -191,9 +202,15 @@ const loadP2PNonConsol = async (dynamoData, shipmentAparData) => {
     specialInstructions: (
       getNotesP2Pconsols(ptype.PickupTimeRange, ptype.PickupDateTime, "p") +
       "\r\n" +
+      (ptype.ShipContact.length > 0 || ptype.ShipPhone.length > 0
+        ? "Contact " + ptype.ShipContact + " " + ptype.ShipPhone + "\r\n"
+        : "") +
       ptype.PickupNote
     ).slice(0, 200),
   };
+
+  const ptypeAddressData = await checkAddressByGoogleApi(pStopTypeData.address);
+  pStopTypeData.address = ptypeAddressData;
 
   /**
    * preparing delivery type stop obj from table ConfirmationCost based on shipmentAPAR.FK_OrderNo
@@ -204,6 +221,18 @@ const loadP2PNonConsol = async (dynamoData, shipmentAparData) => {
    * scheduledDate: check getGMTDiff() function
    * specialInstructions:- check getNotesP2Pconsols() function and added DeliveryNote
    */
+  let delNotes = "";
+  if (dtype.ScheduledBy == "T") {
+    delNotes =
+      "Deliver between " +
+      moment(dtype.DeliveryDateTime).format("HH:mm") +
+      " and " +
+      moment(dtype.DeliveryTimeRange).format("HH:mm");
+  } else if (dtype.ScheduledBy == "B") {
+    delNotes = "Deliver by " + moment(dtype.DeliveryDateTime).format("HH:mm");
+  } else {
+    delNotes = "Deliver at " + moment(dtype.DeliveryDateTime).format("HH:mm");
+  }
   const dStopTypeData = {
     stopType: "D",
     stopNum: 1,
@@ -223,11 +252,17 @@ const loadP2PNonConsol = async (dynamoData, shipmentAparData) => {
       dtype.FK_ConCountry
     ),
     specialInstructions: (
-      getNotesP2Pconsols(dtype.DeliveryTimeRange, dtype.DeliveryDateTime, "d") +
+      delNotes +
       "\r\n" +
+      (dtype.ConContact.length > 0 || dtype.ConPhone.length > 0
+        ? "Contact " + dtype.ConContact + " " + dtype.ConPhone + "\r\n"
+        : "") +
       dtype.DeliveryNote
     ).slice(0, 200),
   };
+
+  const dtypeAddressData = await checkAddressByGoogleApi(dStopTypeData.address);
+  dStopTypeData.address = dtypeAddressData;
 
   /**
    * filtered shipmentDesc data based on shipmentApar.FK_OrderNo to get hazardous and unNum
@@ -248,8 +283,14 @@ const loadP2PNonConsol = async (dynamoData, shipmentAparData) => {
       stops: [pStopTypeData, dStopTypeData],
       dockHigh: "N", // req [Y / N]
       hazardous: getHazardous(filteredSD),
-      liftGate: getLiftGate(shipmentAparCargo),
+      liftGate: getLiftGate(shipmentAparCargo, shipmentHeader),
       unNum: getUnNum(filteredSD), // accepts only 4 degit number as string
+      notes:
+        (equipment?.Description + "\r\n" ?? "") +
+        "Ready " +
+        moment(shipmentHeader?.[0]?.ReadyDateTime).format("HH:mm") +
+        " close " +
+        moment(shipmentHeader?.[0]?.CloseTime).format("HH:mm"),
     },
   };
   console.log("iviaPayload", JSON.stringify(iviaPayload));
@@ -490,6 +531,7 @@ async function fetchDataFromTables(tableList, primaryKeyValue) {
       shipmentInstructions = [...shipmentInstructions, ...ins.Items];
     }
     newObj.shipmentInstructions = shipmentInstructions;
+
     /**
      * Fetch shipment apar for liftgate based on shipmentDesc.FK_OrderNo
      */
@@ -512,8 +554,33 @@ async function fetchDataFromTables(tableList, primaryKeyValue) {
       let sac = await ddb.query(sapcParams).promise();
       shipmentAparCargo = [...shipmentAparCargo, ...sac.Items];
     }
-    console.log("shipmentAparCargo", shipmentAparCargo);
+    // console.log("shipmentAparCargo", shipmentAparCargo);
     newObj.shipmentAparCargo = shipmentAparCargo;
+    console.log("newObj.shipmentHeader", newObj.shipmentHeader);
+
+    /**
+     * EQUIPMENT_TABLE
+     */
+    let equipment = [];
+    if (
+      newObj.shipmentHeader.length > 0 &&
+      newObj.shipmentHeader[0].FK_EquipmentCode != ""
+    ) {
+      const equipmentParam = {
+        TableName: EQUIPMENT_TABLE,
+        KeyConditionExpression: "PK_EquipmentCode = :PK_EquipmentCode",
+        ExpressionAttributeValues: {
+          ":PK_EquipmentCode":
+            newObj.shipmentHeader[0].FK_EquipmentCode.toString(),
+        },
+      };
+
+      equipment = await ddb.query(equipmentParam).promise();
+      console.log("equipment", equipment);
+      equipment = equipment.Items;
+    }
+    newObj.equipment = equipment;
+
     return newObj;
   } catch (error) {
     console.log("error:fetchDataFromTables", error);
