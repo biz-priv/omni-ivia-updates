@@ -170,9 +170,7 @@ const loadMultistopConsole = async (dynamoData, shipmentAparData) => {
             csh?.ConsolStopPhone +
             "\r\n"
           : "") +
-        csh.ConsolStopNotes +
-        "\r\n" +
-        sInsNotes
+        csh.ConsolStopNotes
       ).slice(0, 200),
     };
     return stopPayload;
@@ -240,9 +238,7 @@ const loadMultistopConsole = async (dynamoData, shipmentAparData) => {
             csh?.ConsolStopPhone +
             "\r\n"
           : "") +
-        csh.ConsolStopNotes +
-        "\r\n" +
-        sInsNotes
+        csh.ConsolStopNotes
       ).slice(0, 200),
     };
     return stopPayload;

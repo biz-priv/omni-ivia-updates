@@ -151,9 +151,7 @@ const loadP2PConsole = async (dynamoData, shipmentAparData) => {
           " " +
           confirmationCost?.ShipPhone +
           "\r\n"
-        : "") +
-      "\r\n" +
-      pInsNotes
+        : "")
     ).slice(0, 200),
   };
 
@@ -197,9 +195,7 @@ const loadP2PConsole = async (dynamoData, shipmentAparData) => {
           confirmationCost?.ConPhone +
           "\r\n"
         : "") +
-      (confirmationCost?.DeliveryNote ?? "") +
-      "\r\n" +
-      dInsNotes
+      (confirmationCost?.DeliveryNote ?? "")
     ).slice(0, 200),
   };
   const dtypeAddressData = await checkAddressByGoogleApi(dStopTypeData.address);
