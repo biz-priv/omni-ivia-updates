@@ -24,6 +24,7 @@ function:
     CONFIRMATION_COST: ${ssm:/omni-wt-rt-updates/${self:provider.stage}/confirmation-cost/ddb.tableName~true}
     CONSOL_STOP_HEADERS: ${ssm:/omni-wt-rt-updates/${self:provider.stage}/consol-stop-headers/ddb.tableName~true}
     CONSOL_STOP_ITEMS: ${ssm:/omni-wt-rt-updates/${self:provider.stage}/consol-stop-items/ddb.tableName~true}
+    EQUIPMENT_TABLE: ${ssm:/omni-wt-rt-updates/${self:provider.stage}/equipment/ddb.tableName~true}
     CONFIRMATION_COST_INDEX_KEY_NAME: ${ssm:/omni-wt-rt-updates/${self:provider.stage}/confirmation-cost/ddb.orderNoIndex}
     INSTRUCTIONS_INDEX_KEY_NAME: ${ssm:/omni-wt-rt-updates/${self:provider.stage}/instructions/ddb.orderNoIndex}
     IVIA_DDB: ${ssm:/omni-ivia/${self:provider.stage}/ddb.tableName}
@@ -32,6 +33,7 @@ function:
     TIMEZONE_MASTER: ${ssm:/omni-wt-rt-updates/${self:provider.stage}/timezone-master/ddb.tableName~true}
     TIMEZONE_ZIP_CR: ${ssm:/omni-wt-rt-updates/${self:provider.stage}/timezone-zip-cr/ddb.tableName~true}
     ZIP_CODES: ${ssm:/omni-wt-rt-updates/${self:provider.stage}/zip-codes/ddb.tableName~true}
+    ADDRESS_MAPPING_G_API_KEY: ${ssm:/omni-ivia/${self:provider.stage}/google/api.Key~true}
     ERROR_NOTIFICATION_SNS_ARN: !Ref ErrorNotification
 
   events:

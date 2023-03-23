@@ -45,17 +45,32 @@ function getLatestObjByTimeStamp(data) {
  * @param {*} param
  * @returns Y/N
  */
-function getLiftGate(param) {
+
+function getLiftGate(shipmentAparCargo, shipmentHeader) {
   try {
     let val = "N";
-    for (let index = 0; index < param.length; index++) {
-      const element = param[index];
+    for (let index = 0; index < shipmentHeader.length; index++) {
+      const element = shipmentHeader[index];
+      if (
+        ["LFT PJ BOX", "LFTG BOX"].includes(
+          element?.FK_EquipmentCode.toUpperCase()
+        )
+      ) {
+        val = "Y";
+      }
+    }
+
+    if (val === "Y") {
+      return val;
+    }
+
+    for (let index = 0; index < shipmentAparCargo.length; index++) {
+      const element = shipmentAparCargo[index];
       if (
         ["LIFT", "LIFTD", "LIFTP", "TRLPJ"].includes(
           element?.ChargeCode.toUpperCase()
         )
       ) {
-        console.log("param", param);
         val = "Y";
       }
     }
@@ -183,6 +198,7 @@ function validatePayload(payload) {
         hazardous: Joi.string().required(), // required  shipmentDesc?.Hazmat
         liftGate: Joi.string().required(), // required shipmentApar.ChargeCode
         unNum: Joi.any().allow("").required(), // accepts only 4 degit number as string
+        notes: Joi.string().allow("").required(),
       }).required(),
     }).required();
 
@@ -495,6 +511,86 @@ function sortObjByStopNo(data, key) {
   }
 }
 
+/**
+ * checkAddressByGoogleApi
+ * get full address by google api
+ * @param {*} address
+ * @returns
+ */
+async function checkAddressByGoogleApi(mainAddressData) {
+  const axios = require("axios");
+  let city = "",
+    state = "",
+    country = "";
+  let addressData = mainAddressData;
+
+  try {
+    if (
+      addressData.address1 != "" &&
+      addressData.zip != "" &&
+      (addressData.city == "" ||
+        addressData.state == "" ||
+        addressData.country == "")
+    ) {
+      console.log("**checkAddressByGoogleApi****");
+      const address = [
+        addressData.address1,
+        addressData.address2,
+        addressData.city,
+        addressData.state,
+        addressData.country,
+        addressData.zip,
+      ].join(",");
+
+      const apiKey = process.env.ADDRESS_MAPPING_G_API_KEY;
+      // Get geocode data for address1
+      const geocode1 = await axios.get(
+        `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(
+          address
+        )}&key=${apiKey}`
+      );
+      console.log("geocode1.data", geocode1.data);
+      if (geocode1.data.status !== "OK") {
+        throw new Error(`Unable to geocode ${address}`);
+      }
+      const { results } = geocode1.data;
+      console.log("geocode1", JSON.stringify(results[0]));
+
+      for (
+        let index = 0;
+        index < results[0].address_components.length;
+        index++
+      ) {
+        const element = results[0].address_components[index];
+        if (element.types.includes("locality")) {
+          city = element.short_name;
+        }
+        if (element.types.includes("administrative_area_level_1")) {
+          state = element.short_name;
+        }
+        if (element.types.includes("country")) {
+          country = element.short_name;
+        }
+      }
+      console.log({ city, state, country });
+
+      return {
+        address1: addressData.address1,
+        address2: addressData.address2,
+        city: addressData.city.length > 0 ? addressData.city : city,
+        country: addressData.country.length > 0 ? addressData.country : country,
+        state: addressData.state.length > 0 ? addressData.state : state,
+        zip: addressData.zip,
+      };
+    } else {
+      return addressData;
+    }
+  } catch (error) {
+    console.log("checkAddressByGoogleApi:error", error);
+    return addressData;
+  }
+}
+
 module.exports = {
   prepareBatchFailureObj,
   getLatestObjByTimeStamp,
@@ -507,4 +603,5 @@ module.exports = {
   getStatus,
   getNotesP2Pconsols,
   sortObjByStopNo,
+  checkAddressByGoogleApi,
 };

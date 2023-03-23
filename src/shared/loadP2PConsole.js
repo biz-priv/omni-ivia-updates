@@ -7,6 +7,7 @@ const {
   getGMTDiff,
   getStatus,
   getNotesP2Pconsols,
+  checkAddressByGoogleApi,
 } = require("./dataHelper");
 const momentTZ = require("moment-timezone");
 const { v4: uuidv4 } = require("uuid");
@@ -26,6 +27,7 @@ const {
   IVIA_VENDOR_ID,
   INSTRUCTIONS_TABLE,
   INSTRUCTIONS_INDEX_KEY_NAME,
+  EQUIPMENT_TABLE,
   // IVIA_CARRIER_ID,
   STAGE,
 } = process.env;
@@ -52,6 +54,7 @@ const loadP2PConsole = async (dynamoData, shipmentAparData) => {
   const shipmentHeader = dataSet.shipmentHeader;
   const shipmentDesc = dataSet.shipmentDesc;
   const shipmentInstructions = dataSet.shipmentInstructions;
+  const equipment = dataSet.equipment.length > 0 ? dataSet.equipment[0] : {};
 
   //only used for liftgate
   const shipmentAparCargo = dataSet.shipmentAparCargo;
@@ -63,6 +66,13 @@ const loadP2PConsole = async (dynamoData, shipmentAparData) => {
    * preparing cargo obj form table shipmentDesc based on shipmentAPAR.FK_OrderNo
    */
   const cargo = shipmentDesc.map((e) => {
+    const checkIfZero =
+      parseInt(e?.Length != "" ? e?.Length : 0) +
+        parseInt(e?.Width != "" ? e?.Width : 0) +
+        parseInt(e?.Height != "" ? e?.Height : 0) ===
+      0
+        ? true
+        : false;
     return {
       packageType:
         e.FK_PieceTypeId === "BOX"
@@ -71,9 +81,9 @@ const loadP2PConsole = async (dynamoData, shipmentAparData) => {
           ? "PAL"
           : "PIE",
       quantity: e?.Pieces ?? "",
-      length: e?.Length ? parseInt(e?.Length) : "",
-      width: e?.Width ? parseInt(e?.Width) : "",
-      height: e?.Height ? parseInt(e?.Height) : "",
+      length: checkIfZero ? 1 : parseInt(e?.Length),
+      width: checkIfZero ? 1 : parseInt(e?.Width),
+      height: checkIfZero ? 1 : parseInt(e?.Height),
       weight: e?.Weight ? parseInt(e?.Weight) : "",
       stackable: "Y", // hardcode
       turnable: "Y", // hardcode
@@ -134,11 +144,21 @@ const loadP2PConsole = async (dynamoData, shipmentAparData) => {
         "p"
       ) +
       "\r\n" +
-      (confirmationCost?.PickupNote ?? "") +
+      (confirmationCost?.ShipContact.length > 0 ||
+      confirmationCost?.ShipPhone.length > 0
+        ? "Contact " +
+          confirmationCost?.ShipContact +
+          " " +
+          confirmationCost?.ShipPhone +
+          "\r\n"
+        : "") +
       "\r\n" +
       pInsNotes
     ).slice(0, 200),
   };
+
+  const ptypeAddressData = await checkAddressByGoogleApi(pStopTypeData.address);
+  pStopTypeData.address = ptypeAddressData;
 
   /**
    * preparing delivery type stope obj from table ConfirmationCost
@@ -169,11 +189,21 @@ const loadP2PConsole = async (dynamoData, shipmentAparData) => {
         "d"
       ) +
       "\r\n" +
+      (confirmationCost?.ConContact.length > 0 ||
+      confirmationCost?.ConPhone.length > 0
+        ? "Contact " +
+          confirmationCost?.ConContact +
+          " " +
+          confirmationCost?.ConPhone +
+          "\r\n"
+        : "") +
       (confirmationCost?.DeliveryNote ?? "") +
       "\r\n" +
       dInsNotes
     ).slice(0, 200),
   };
+  const dtypeAddressData = await checkAddressByGoogleApi(dStopTypeData.address);
+  dStopTypeData.address = dtypeAddressData;
 
   //IVIA payload
   const iviaPayload = {
@@ -186,8 +216,9 @@ const loadP2PConsole = async (dynamoData, shipmentAparData) => {
       stops: [pStopTypeData, dStopTypeData],
       dockHigh: "N", // req [Y / N]
       hazardous: getHazardous(shipmentDesc),
-      liftGate: getLiftGate(shipmentAparCargo),
+      liftGate: getLiftGate(shipmentAparCargo, shipmentHeader),
       unNum: getUnNum(shipmentDesc), // accepts only 4 degit number as string
+      notes: equipment?.Description ?? "",
     },
   };
   console.log("iviaPayload", JSON.stringify(iviaPayload));
@@ -351,6 +382,41 @@ async function fetchDataFromTablesList(CONSOL_NO) {
       shipmentAparCargo = [...shipmentAparCargo, ...sac.Items];
     }
 
+    /**
+     * EQUIPMENT_TABLE
+     */
+    const shAparForEQParam = {
+      TableName: SHIPMENT_APAR_TABLE,
+      IndexName: globalConsolIndex,
+      KeyConditionExpression: "ConsolNo = :ConsolNo",
+      FilterExpression:
+        "FK_VendorId = :FK_VendorId and FK_OrderNo = :FK_OrderNo",
+      ExpressionAttributeValues: {
+        ":ConsolNo": CONSOL_NO.toString(),
+        ":FK_VendorId": IVIA_VENDOR_ID.toString(),
+        ":FK_OrderNo": CONSOL_NO.toString(),
+      },
+    };
+
+    let shAparForEQData = await ddb.query(shAparForEQParam).promise();
+    shAparForEQData = shAparForEQData.Items;
+    console.log("shAparForEQData", shAparForEQData);
+
+    let equipment = [];
+    if (shAparForEQData.length > 0 && shAparForEQData[0].FK_EquipmentCode) {
+      const FK_EquipmentCode = shAparForEQData[0].FK_EquipmentCode;
+      const equipmentParam = {
+        TableName: EQUIPMENT_TABLE,
+        KeyConditionExpression: "PK_EquipmentCode = :PK_EquipmentCode",
+        ExpressionAttributeValues: {
+          ":PK_EquipmentCode": FK_EquipmentCode.toString(),
+        },
+      };
+
+      const eqData = await ddb.query(equipmentParam).promise();
+      equipment = eqData.Items;
+      console.log("equipment", eqData);
+    }
     return {
       shipmentApar,
       confirmationCost,
@@ -358,6 +424,7 @@ async function fetchDataFromTablesList(CONSOL_NO) {
       shipmentHeader,
       shipmentAparCargo,
       shipmentInstructions,
+      equipment,
     };
   } catch (error) {
     console.log("error", error);

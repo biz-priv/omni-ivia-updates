@@ -7,6 +7,7 @@ const {
   getGMTDiff,
   getStatus,
   sortObjByStopNo,
+  checkAddressByGoogleApi,
 } = require("./dataHelper");
 const moment = require("moment");
 const momentTZ = require("moment-timezone");
@@ -27,6 +28,7 @@ const {
   INSTRUCTIONS_INDEX_KEY_NAME,
   IVIA_DDB,
   IVIA_VENDOR_ID,
+  EQUIPMENT_TABLE,
   // IVIA_CARRIER_ID,
   STAGE,
 } = process.env;
@@ -56,6 +58,7 @@ const loadMultistopConsole = async (dynamoData, shipmentAparData) => {
   const consolStopHeaders = dataSet.consolStopHeaders;
   const consolStopItems = dataSet.consolStopItems;
   const shipmentInstructions = dataSet.shipmentInstructions;
+  const equipment = dataSet.equipment.length > 0 ? dataSet.equipment[0] : {};
 
   //only used for liftgate
   const shipmentAparCargo = dataSet.shipmentAparCargo;
@@ -160,6 +163,13 @@ const loadMultistopConsole = async (dynamoData, shipmentAparData) => {
       specialInstructions: (
         spInsMsg +
         "\r\n" +
+        (csh?.ConsolStopContact.length > 0 || csh?.ConsolStopPhone.length > 0
+          ? "Contact " +
+            csh?.ConsolStopContact +
+            " " +
+            csh?.ConsolStopPhone +
+            "\r\n"
+          : "") +
         csh.ConsolStopNotes +
         "\r\n" +
         sInsNotes
@@ -223,6 +233,13 @@ const loadMultistopConsole = async (dynamoData, shipmentAparData) => {
       specialInstructions: (
         spInsMsg +
         "\r\n" +
+        (csh?.ConsolStopContact.length > 0 || csh?.ConsolStopPhone.length > 0
+          ? "Contact " +
+            csh?.ConsolStopContact +
+            " " +
+            csh?.ConsolStopPhone +
+            "\r\n"
+          : "") +
         csh.ConsolStopNotes +
         "\r\n" +
         sInsNotes
@@ -243,10 +260,13 @@ const loadMultistopConsole = async (dynamoData, shipmentAparData) => {
   let stopsList = [];
   for (let index = 0; index < margedStops.length; index++) {
     const element = margedStops[index];
+    const addressData = await checkAddressByGoogleApi(element.address);
+
     stopsList = [
       ...stopsList,
       {
         ...element,
+        address: addressData,
         scheduledDate: await getGMTDiff(
           element.scheduledDate,
           element.address.zip,
@@ -273,8 +293,9 @@ const loadMultistopConsole = async (dynamoData, shipmentAparData) => {
       stops: sortObjByStopNo(stopsList, "stopNum"),
       dockHigh: "N", // req [Y / N]
       hazardous: getHazardous(filteredSD),
-      liftGate: getLiftGate(shipmentAparCargo),
+      liftGate: getLiftGate(shipmentAparCargo, shipmentHeader),
       unNum: getUnNum(filteredSD), // accepts only 4 degit number as string
+      notes: equipment?.Description ?? "",
     },
   };
   console.log("iviaPayload", JSON.stringify(iviaPayload));
@@ -339,21 +360,31 @@ function getCargoData(shipmentDesc, ele) {
   const fkOrderNoList = ele.map((e) => e.FK_OrderNo);
   return shipmentDesc
     .filter((e) => fkOrderNoList.includes(e.FK_OrderNo))
-    .map((e) => ({
-      packageType:
-        e.FK_PieceTypeId === "BOX"
-          ? "BOX"
-          : e.FK_PieceTypeId === "PLT"
-          ? "PAL"
-          : "PIE",
-      quantity: e?.Pieces ?? "",
-      length: e?.Length ? parseInt(e?.Length) : "",
-      width: e?.Width ? parseInt(e?.Width) : "",
-      height: e?.Height ? parseInt(e?.Height) : "",
-      weight: e?.Weight ? parseInt(e?.Weight) : "",
-      stackable: "Y", // hardcode
-      turnable: "Y", // hardcode
-    }));
+    .map((e) => {
+      const checkIfZero =
+        parseInt(e?.Length != "" ? e?.Length : 0) +
+          parseInt(e?.Width != "" ? e?.Width : 0) +
+          parseInt(e?.Height != "" ? e?.Height : 0) ===
+        0
+          ? true
+          : false;
+
+      return {
+        packageType:
+          e.FK_PieceTypeId === "BOX"
+            ? "BOX"
+            : e.FK_PieceTypeId === "PLT"
+            ? "PAL"
+            : "PIE",
+        quantity: e?.Pieces ?? "",
+        length: checkIfZero ? 1 : parseInt(e?.Length),
+        width: checkIfZero ? 1 : parseInt(e?.Width),
+        height: checkIfZero ? 1 : parseInt(e?.Height),
+        weight: e?.Weight ? parseInt(e?.Weight) : "",
+        stackable: "Y", // hardcode
+        turnable: "Y", // hardcode
+      };
+    });
 }
 
 /**
@@ -556,6 +587,41 @@ async function fetchDataFromTablesList(CONSOL_NO) {
       shipmentAparCargo = [...shipmentAparCargo, ...sac.Items];
     }
 
+    /**
+     * EQUIPMENT_TABLE
+     */
+    const shAparForEQParam = {
+      TableName: SHIPMENT_APAR_TABLE,
+      IndexName: globalConsolIndex,
+      KeyConditionExpression: "ConsolNo = :ConsolNo",
+      FilterExpression:
+        "FK_VendorId = :FK_VendorId and FK_OrderNo = :FK_OrderNo",
+      ExpressionAttributeValues: {
+        ":ConsolNo": CONSOL_NO.toString(),
+        ":FK_VendorId": IVIA_VENDOR_ID.toString(),
+        ":FK_OrderNo": CONSOL_NO.toString(),
+      },
+    };
+    let shAparForEQData = await ddb.query(shAparForEQParam).promise();
+    shAparForEQData = shAparForEQData.Items;
+    console.log("shAparForEQData", shAparForEQData);
+
+    let equipment = [];
+    if (shAparForEQData.length > 0 && shAparForEQData[0].FK_EquipmentCode) {
+      const FK_EquipmentCode = shAparForEQData[0].FK_EquipmentCode;
+      const equipmentParam = {
+        TableName: EQUIPMENT_TABLE,
+        KeyConditionExpression: "PK_EquipmentCode = :PK_EquipmentCode",
+        ExpressionAttributeValues: {
+          ":PK_EquipmentCode": FK_EquipmentCode.toString(),
+        },
+      };
+
+      const eqData = await ddb.query(equipmentParam).promise();
+      equipment = eqData.Items;
+      console.log("equipment", eqData);
+    }
+
     return {
       shipmentApar,
       shipmentInstructions,
@@ -564,6 +630,7 @@ async function fetchDataFromTablesList(CONSOL_NO) {
       consolStopHeaders,
       consolStopItems,
       shipmentAparCargo,
+      equipment,
     };
   } catch (error) {
     console.log("error", error);
