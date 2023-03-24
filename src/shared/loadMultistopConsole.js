@@ -257,17 +257,13 @@ const loadMultistopConsole = async (dynamoData, shipmentAparData) => {
   for (let index = 0; index < margedStops.length; index++) {
     const element = margedStops[index];
     const addressData = await checkAddressByGoogleApi(element.address);
-
+    console.log("addressData", addressData);
     stopsList = [
       ...stopsList,
       {
         ...element,
         address: addressData,
-        scheduledDate: await getGMTDiff(
-          element.scheduledDate,
-          element.address.zip,
-          element.address.country
-        ),
+        scheduledDate: await getGMTDiff(element.scheduledDate, addressData),
       },
     ];
   }

@@ -132,11 +132,7 @@ const loadP2PConsole = async (dynamoData, shipmentAparData) => {
     },
     companyName: confirmationCost?.ShipName ?? "",
     cargo: cargo,
-    scheduledDate: await getGMTDiff(
-      confirmationCost?.PickupDateTime ?? "",
-      confirmationCost?.ShipZip ?? "",
-      confirmationCost?.FK_ShipCountry
-    ),
+    scheduledDate: "",
     specialInstructions: (
       getNotesP2Pconsols(
         confirmationCost?.PickupTimeRange ?? "",
@@ -157,6 +153,10 @@ const loadP2PConsole = async (dynamoData, shipmentAparData) => {
 
   const ptypeAddressData = await checkAddressByGoogleApi(pStopTypeData.address);
   pStopTypeData.address = ptypeAddressData;
+  pStopTypeData.scheduledDate = await getGMTDiff(
+    confirmationCost?.PickupDateTime ?? "",
+    ptypeAddressData
+  );
 
   /**
    * preparing delivery type stope obj from table ConfirmationCost
@@ -175,11 +175,7 @@ const loadP2PConsole = async (dynamoData, shipmentAparData) => {
       zip: confirmationCost?.ConZip ?? "",
     },
     companyName: confirmationCost?.ConName ?? "",
-    scheduledDate: await getGMTDiff(
-      confirmationCost?.DeliveryDateTime ?? "",
-      confirmationCost?.ConZip ?? "",
-      confirmationCost?.FK_ConCountry
-    ),
+    scheduledDate: "",
     specialInstructions: (
       getNotesP2Pconsols(
         confirmationCost?.DeliveryTimeRange,
@@ -200,6 +196,10 @@ const loadP2PConsole = async (dynamoData, shipmentAparData) => {
   };
   const dtypeAddressData = await checkAddressByGoogleApi(dStopTypeData.address);
   dStopTypeData.address = dtypeAddressData;
+  dStopTypeData.scheduledDate = await getGMTDiff(
+    confirmationCost?.DeliveryDateTime ?? "",
+    dtypeAddressData
+  );
 
   //IVIA payload
   const iviaPayload = {
