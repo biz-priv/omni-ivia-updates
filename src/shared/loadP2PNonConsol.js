@@ -194,11 +194,7 @@ const loadP2PNonConsol = async (dynamoData, shipmentAparData) => {
     },
     companyName: ptype.ShipName,
     cargo: cargo,
-    scheduledDate: await getGMTDiff(
-      ptype.PickupDateTime,
-      ptype.ShipZip,
-      ptype.FK_ShipCountry
-    ),
+    scheduledDate: "",
     specialInstructions: (
       getNotesP2Pconsols(ptype.PickupTimeRange, ptype.PickupDateTime, "p") +
       "\r\n" +
@@ -211,6 +207,10 @@ const loadP2PNonConsol = async (dynamoData, shipmentAparData) => {
 
   const ptypeAddressData = await checkAddressByGoogleApi(pStopTypeData.address);
   pStopTypeData.address = ptypeAddressData;
+  pStopTypeData.scheduledDate = await getGMTDiff(
+    ptype.PickupDateTime,
+    ptypeAddressData
+  );
 
   /**
    * preparing delivery type stop obj from table ConfirmationCost based on shipmentAPAR.FK_OrderNo
@@ -246,11 +246,7 @@ const loadP2PNonConsol = async (dynamoData, shipmentAparData) => {
       zip: dtype.ConZip,
     },
     companyName: dtype.ConName,
-    scheduledDate: await getGMTDiff(
-      dtype.DeliveryDateTime,
-      dtype.ConZip,
-      dtype.FK_ConCountry
-    ),
+    scheduledDate: "",
     specialInstructions: (
       delNotes +
       "\r\n" +
@@ -263,6 +259,10 @@ const loadP2PNonConsol = async (dynamoData, shipmentAparData) => {
 
   const dtypeAddressData = await checkAddressByGoogleApi(dStopTypeData.address);
   dStopTypeData.address = dtypeAddressData;
+  dStopTypeData.scheduledDate = await getGMTDiff(
+    dtype.DeliveryDateTime,
+    dtypeAddressData
+  );
 
   /**
    * filtered shipmentDesc data based on shipmentApar.FK_OrderNo to get hazardous and unNum
@@ -328,6 +328,9 @@ const loadP2PNonConsol = async (dynamoData, shipmentAparData) => {
       errorReason: isError ? "validation error" : "",
     };
     if (isError) {
+      /**
+       *
+       */
       await sendSNSMessage(iviaTableData);
     }
     console.log("iviaTableData", iviaTableData);
