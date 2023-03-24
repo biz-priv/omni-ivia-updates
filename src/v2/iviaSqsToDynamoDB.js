@@ -21,11 +21,6 @@ module.exports.handler = async (event, context, callback) => {
     //we may have multiple sqs events so using for loop
     for (let index = 0; index < sqsEventRecords.length; index++) {
       try {
-        /**
-         * added 45 sec delay
-         */
-        await setDelay(45);
-
         //pick sqs record
         const sqsItem = sqsEventRecords[index];
 
@@ -36,6 +31,10 @@ module.exports.handler = async (event, context, callback) => {
         if (dynamoData.dynamoTableName !== SHIPMENT_APAR_TABLE) {
           continue;
         }
+        /**
+         * added 45 sec delay
+         */
+        await setDelay(45);
 
         //converting dynamo obj to js obj
         const shipmentAparData = AWS.DynamoDB.Converter.unmarshall(
