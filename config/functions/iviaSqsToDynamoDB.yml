@@ -40,4 +40,6 @@ function:
     - sqs:
         arn: ${ssm:/omni-wt-rt-updates/${self:provider.stage}/ivia/sqs.arn~true}
         batchSize: 2
+        # maximumBatchingWindow: 60
+        maximumConcurrency: 1
         functionResponseType: ReportBatchItemFailures
