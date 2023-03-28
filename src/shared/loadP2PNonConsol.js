@@ -360,8 +360,9 @@ function validateAndCheckIfDataSentToIvia(payload, shipmentApar) {
       const params = {
         TableName: IVIA_DDB,
         IndexName: "omni-ivia-ConsolNo-index",
-        KeyConditionExpression: "ConsolNo = :ConsolNo",
-        FilterExpression: "FK_OrderNo = :FK_OrderNo",
+        KeyConditionExpression:
+          "ConsolNo = :ConsolNo and FK_OrderNo = :FK_OrderNo",
+        // FilterExpression: "FK_OrderNo = :FK_OrderNo",
         ExpressionAttributeValues: {
           ":ConsolNo": shipmentApar.ConsolNo.toString(),
           ":FK_OrderNo": shipmentApar.FK_OrderNo.toString(),
