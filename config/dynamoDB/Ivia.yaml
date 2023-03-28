@@ -8,6 +8,8 @@ IviaDynamoTable:
         AttributeType: "S"
       - AttributeName: "ConsolNo"
         AttributeType: "S"
+      - AttributeName: "FK_OrderNo"
+        AttributeType: "S"
     KeySchema:
       - AttributeName: "id"
         KeyType: HASH
@@ -16,6 +18,8 @@ IviaDynamoTable:
         KeySchema:
           - AttributeName: "ConsolNo"
             KeyType: "HASH"
+          - AttributeName: "FK_OrderNo"
+            KeyType: "RANGE"
         Projection:
           ProjectionType: "ALL"
     StreamSpecification:
