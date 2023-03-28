@@ -446,7 +446,7 @@ function validateAndCheckIfDataSentToIvia(payload, ConsolNo) {
       //fetch from ivia table and check if data processed or not
       const params = {
         TableName: IVIA_DDB,
-        IndexName: "omni-ivia-ConsolNo-index",
+        IndexName: "omni-ivia-ConsolNo-FK_OrderNo-index",
         KeyConditionExpression: "ConsolNo = :ConsolNo",
         ExpressionAttributeValues: {
           ":ConsolNo": ConsolNo.toString(),

@@ -14,7 +14,7 @@ IviaDynamoTable:
       - AttributeName: "id"
         KeyType: HASH
     GlobalSecondaryIndexes:
-      - IndexName: omni-ivia-ConsolNo-index
+      - IndexName: omni-ivia-ConsolNo-FK_OrderNo-index
         KeySchema:
           - AttributeName: "ConsolNo"
             KeyType: "HASH"
