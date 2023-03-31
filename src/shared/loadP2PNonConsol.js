@@ -120,12 +120,14 @@ const loadP2PNonConsol = async (dynamoData, shipmentAparData) => {
     ...shipper,
     PickupTimeRange: shipmentHeader?.[0]?.ReadyDateTimeRange ?? "",
     PickupDateTime: shipmentHeader?.[0]?.ReadyDateTime ?? "",
+    ScheduledBy: shipmentHeader?.[0]?.ScheduledBy ?? "",
     PickupNote: pInsNotes,
   };
   dtype = {
     ...consignee,
     DeliveryTimeRange: shipmentHeader?.[0]?.ScheduledDateTimeRange ?? "",
     DeliveryDateTime: shipmentHeader?.[0]?.ScheduledDateTime ?? "",
+    ScheduledBy: shipmentHeader?.[0]?.ScheduledBy ?? "",
     DeliveryNote: dInsNotes,
   };
   // }
