@@ -188,7 +188,17 @@ function validatePayload(payload) {
                 }).required()
               ),
               companyName: Joi.string().required(), //required
-              scheduledDate: Joi.number().integer().required(), // required
+              scheduledDate: Joi.number()
+                .integer()
+                .positive()
+                .min(1)
+                .required()
+                .messages({
+                  "number.base": `"scheduledDate" must be a valid DATE and greater than 2023-01-01`,
+                  "number.positive": `"scheduledDate" must be a valid DATE and greater than 2023-01-01`,
+                  "number.min": `"scheduledDate" must be a valid DATE and greater than 2023-01-01`,
+                  "any.required": `"scheduledDate" must be a valid DATE and greater than 2023-01-01`,
+                }), // required
               specialInstructions: Joi.string().allow(""),
             }).unknown()
           )
@@ -248,7 +258,7 @@ async function getGMTDiff(dateTime, address) {
       dateTime &&
       dateTime.length > 1 &&
       moment(dateTime).isValid() &&
-      dateTime > "1970-01-01"
+      dateTime > "2023-01-01"
     ) {
       const zipCode =
         country === "US" && zip.includes("-") ? zip.split("-")[0] : zip;
