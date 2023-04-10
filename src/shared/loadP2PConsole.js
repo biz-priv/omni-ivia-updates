@@ -8,6 +8,7 @@ const {
   getStatus,
   getNotesP2Pconsols,
   checkAddressByGoogleApi,
+  checkIfShipmentHeaderOrderDatePass,
 } = require("./dataHelper");
 const momentTZ = require("moment-timezone");
 const { v4: uuidv4 } = require("uuid");
@@ -55,6 +56,14 @@ const loadP2PConsole = async (dynamoData, shipmentAparData) => {
   const shipmentDesc = dataSet.shipmentDesc;
   const shipmentInstructions = dataSet.shipmentInstructions;
   const equipment = dataSet.equipment.length > 0 ? dataSet.equipment[0] : {};
+
+  /**
+   * we need to check in the shipmentHeader.OrderDate >= '2023:04:01 00:00:00' - for both nonconsol and consol -> if this condition satisfies, we send the event to Ivia, else we ignore
+   * Ignore the event if there is no OrderDate or it is "1900
+   */
+  if (!checkIfShipmentHeaderOrderDatePass(shipmentHeader)) {
+    return {};
+  }
 
   //only used for liftgate
   const shipmentAparCargo = dataSet.shipmentAparCargo;

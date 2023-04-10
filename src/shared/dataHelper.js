@@ -660,6 +660,26 @@ async function checkAddressByGoogleApi(mainAddressData) {
   }
 }
 
+/**
+ * we need to check in the shipmentHeader.OrderDate >= '2023:04:01 00:00:00' - for both nonconsol and consol -> if this condition satisfies, we send the event to Ivia, else we ignore
+ * Ignore the event if there is no OrderDate or it is "1900
+ */
+function checkIfShipmentHeaderOrderDatePass(data) {
+  try {
+    let check = true;
+    for (let index = 0; index < data.length; index++) {
+      const element = data[index];
+      if (element?.OrderDate < "2023-04-01 00:00:00") {
+        check = false;
+      }
+    }
+    return check;
+  } catch (error) {
+    console.log("error:checkIfShipmentHeaderOrderDatePass", error);
+    return false;
+  }
+}
+
 module.exports = {
   prepareBatchFailureObj,
   getLatestObjByTimeStamp,
@@ -673,4 +693,5 @@ module.exports = {
   getNotesP2Pconsols,
   sortObjByStopNo,
   checkAddressByGoogleApi,
+  checkIfShipmentHeaderOrderDatePass,
 };

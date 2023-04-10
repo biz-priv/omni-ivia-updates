@@ -8,6 +8,7 @@ const {
   getStatus,
   sortObjByStopNo,
   checkAddressByGoogleApi,
+  checkIfShipmentHeaderOrderDatePass,
 } = require("./dataHelper");
 const moment = require("moment");
 const momentTZ = require("moment-timezone");
@@ -59,6 +60,14 @@ const loadMultistopConsole = async (dynamoData, shipmentAparData) => {
   const consolStopItems = dataSet.consolStopItems;
   const shipmentInstructions = dataSet.shipmentInstructions;
   const equipment = dataSet.equipment.length > 0 ? dataSet.equipment[0] : {};
+
+  /**
+   * we need to check in the shipmentHeader.OrderDate >= '2023:04:01 00:00:00' - for both nonconsol and consol -> if this condition satisfies, we send the event to Ivia, else we ignore
+   * Ignore the event if there is no OrderDate or it is "1900
+   */
+  if (!checkIfShipmentHeaderOrderDatePass(shipmentHeader)) {
+    return {};
+  }
 
   //only used for liftgate
   const shipmentAparCargo = dataSet.shipmentAparCargo;
