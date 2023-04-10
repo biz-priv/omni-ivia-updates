@@ -28,10 +28,10 @@ const {
   INSTRUCTIONS_TABLE,
   INSTRUCTIONS_INDEX_KEY_NAME,
   EQUIPMENT_TABLE,
-  // IVIA_CARRIER_ID,
+  IVIA_CARRIER_ID,
   STAGE,
 } = process.env;
-const IVIA_CARRIER_ID = "102"; //NOTE:- for stage IVIA need to change it later
+// const IVIA_CARRIER_ID = "102"; //NOTE:- for stage IVIA need to change it later
 const globalConsolIndex = "omni-ivia-ConsolNo-index-" + STAGE;
 
 const loadP2PConsole = async (dynamoData, shipmentAparData) => {
