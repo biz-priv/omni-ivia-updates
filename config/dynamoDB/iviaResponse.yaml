@@ -1,0 +1,20 @@
+IviaResponseDynamoTable:
+  Type: AWS::DynamoDB::Table
+  Properties:
+    TableName: omni-rt-ivia-response-${self:provider.stage}
+    BillingMode: PAY_PER_REQUEST
+    AttributeDefinitions:
+      - AttributeName: "id"
+        AttributeType: "S"
+      - AttributeName: "ConsolNo"
+        AttributeType: "S"
+    KeySchema:
+      - AttributeName: "id"
+        KeyType: HASH
+    GlobalSecondaryIndexes:
+      - IndexName: omni-ivia-ConsolNo-index
+        KeySchema:
+          - AttributeName: "ConsolNo"
+            KeyType: "HASH"
+        Projection:
+          ProjectionType: "ALL"

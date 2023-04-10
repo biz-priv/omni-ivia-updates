@@ -1,0 +1,26 @@
+IviaDynamoTable:
+  Type: AWS::DynamoDB::Table
+  Properties:
+    TableName: omni-rt-ivia-${self:provider.stage}
+    BillingMode: PAY_PER_REQUEST
+    AttributeDefinitions:
+      - AttributeName: "id"
+        AttributeType: "S"
+      - AttributeName: "ConsolNo"
+        AttributeType: "S"
+      - AttributeName: "FK_OrderNo"
+        AttributeType: "S"
+    KeySchema:
+      - AttributeName: "id"
+        KeyType: HASH
+    GlobalSecondaryIndexes:
+      - IndexName: omni-ivia-ConsolNo-FK_OrderNo-index
+        KeySchema:
+          - AttributeName: "ConsolNo"
+            KeyType: "HASH"
+          - AttributeName: "FK_OrderNo"
+            KeyType: "RANGE"
+        Projection:
+          ProjectionType: "ALL"
+    StreamSpecification:
+      StreamViewType: NEW_AND_OLD_IMAGES
