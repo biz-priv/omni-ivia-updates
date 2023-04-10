@@ -31,9 +31,9 @@ const {
   IVIA_DDB,
   EQUIPMENT_TABLE,
   IVIA_VENDOR_ID,
-  // IVIA_CARRIER_ID,
+  IVIA_CARRIER_ID,
 } = process.env;
-const IVIA_CARRIER_ID = "102"; //NOTE:- for stage IVIA need to change it later
+// const IVIA_CARRIER_ID = "102"; //NOTE:- for stage IVIA need to change it later
 
 const loadP2PNonConsol = async (dynamoData, shipmentAparData) => {
   console.log("load-P2P-Non-Consol");
