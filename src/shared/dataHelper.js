@@ -666,6 +666,11 @@ async function checkAddressByGoogleApi(mainAddressData) {
  */
 function checkIfShipmentHeaderOrderDatePass(data) {
   try {
+    // if empty then ignor:-
+    if (data.length === 0) {
+      console.log("shipment-header table have no data, so event Ignored");
+      return false;
+    }
     let check = true;
     for (let index = 0; index < data.length; index++) {
       const element = data[index];
