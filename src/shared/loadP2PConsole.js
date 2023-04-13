@@ -99,7 +99,7 @@ const loadP2PConsole = async (dynamoData, shipmentAparData) => {
         turnable: "Y", // hardcode
       };
     })
-    .filter((e) => e.quantity != "" || e.quantity != 0 || e.quantity != "0");
+    .filter((e) => e.quantity != "" && e.quantity != 0 && e.quantity != "0");
   const FK_OrderNoListForIns = [
     ...new Set(shipmentApar.map((e) => e.FK_OrderNo)),
   ];

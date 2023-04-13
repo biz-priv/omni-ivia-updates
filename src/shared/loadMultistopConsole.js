@@ -386,7 +386,7 @@ function getCargoData(shipmentDesc, ele) {
         turnable: "Y", // hardcode
       };
     })
-    .filter((e) => e.quantity != "" || e.quantity != 0 || e.quantity != "0");
+    .filter((e) => e.quantity != "" && e.quantity != 0 && e.quantity != "0");
 }
 
 /**
