@@ -62,6 +62,9 @@ const loadP2PConsole = async (dynamoData, shipmentAparData) => {
    * Ignore the event if there is no OrderDate or it is "1900
    */
   if (!checkIfShipmentHeaderOrderDatePass(shipmentHeader)) {
+    console.log(
+      "event IGNORED shipmentHeader.OrderDate LESS THAN 2023:04:01 00:00:00 "
+    );
     return {};
   }
 
@@ -486,7 +489,10 @@ function validateAndCheckIfDataSentToIvia(payload, ConsolNo) {
           })[0];
 
           //checking if the latest table payload is same with prepared payload
-          if (errorObj.data != JSON.stringify(payload)) {
+          if (
+            errorObj.hasOwnProperty("data") &&
+            errorObj.data != JSON.stringify(payload)
+          ) {
             //check for if we have validation error
             if (errorMsg != "") {
               resolve({ check: false, errorMsg: errorMsg, isError: true });

@@ -401,7 +401,10 @@ function validateAndCheckIfDataSentToIvia(payload, shipmentApar) {
           })[0];
 
           //checking if the latest table payload is same with prepared payload
-          if (errorObj.data != JSON.stringify(payload)) {
+          if (
+            errorObj.hasOwnProperty("data") &&
+            errorObj.data != JSON.stringify(payload)
+          ) {
             //check for if we have validation error
             if (errorMsg != "") {
               resolve({ check: false, errorMsg: errorMsg, isError: true });
