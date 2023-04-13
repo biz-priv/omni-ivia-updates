@@ -180,7 +180,7 @@ const loadP2PNonConsol = async (dynamoData, shipmentAparData) => {
         turnable: "Y", // hardcode
       };
     })
-    .filter((e) => e.quantity != "" || e.quantity != 0 || e.quantity != "0");
+    .filter((e) => e.quantity != "" && e.quantity != 0 && e.quantity != "0");
 
   /**
    * preparing pickup type stop obj from table ConfirmationCost based on shipmentAPAR.FK_OrderNo
