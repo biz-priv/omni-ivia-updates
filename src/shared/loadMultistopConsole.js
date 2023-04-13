@@ -66,6 +66,9 @@ const loadMultistopConsole = async (dynamoData, shipmentAparData) => {
    * Ignore the event if there is no OrderDate or it is "1900
    */
   if (!checkIfShipmentHeaderOrderDatePass(shipmentHeader)) {
+    console.log(
+      "event IGNORED shipmentHeader.OrderDate LESS THAN 2023:04:01 00:00:00 "
+    );
     return {};
   }
 
