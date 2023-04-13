@@ -385,7 +385,8 @@ function getCargoData(shipmentDesc, ele) {
         stackable: "Y", // hardcode
         turnable: "Y", // hardcode
       };
-    });
+    })
+    .filter((e) => e.quantity != "" || e.quantity != 0 || e.quantity != "0");
 }
 
 /**
