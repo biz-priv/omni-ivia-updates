@@ -62,6 +62,9 @@ const loadP2PConsole = async (dynamoData, shipmentAparData) => {
    * Ignore the event if there is no OrderDate or it is "1900
    */
   if (!checkIfShipmentHeaderOrderDatePass(shipmentHeader)) {
+    console.log(
+      "event IGNORED shipmentHeader.OrderDate LESS THAN 2023:04:01 00:00:00 "
+    );
     return {};
   }
 
@@ -74,30 +77,32 @@ const loadP2PConsole = async (dynamoData, shipmentAparData) => {
   /**
    * preparing cargo obj form table shipmentDesc based on shipmentAPAR.FK_OrderNo
    */
-  const cargo = shipmentDesc.map((e) => {
-    const checkIfZero =
-      parseInt(e?.Length != "" ? e?.Length : 0) +
-        parseInt(e?.Width != "" ? e?.Width : 0) +
-        parseInt(e?.Height != "" ? e?.Height : 0) ===
-      0
-        ? true
-        : false;
-    return {
-      packageType:
-        e.FK_PieceTypeId === "BOX"
-          ? "BOX"
-          : e.FK_PieceTypeId === "PLT"
-          ? "PAL"
-          : "PIE",
-      quantity: e?.Pieces ?? "",
-      length: checkIfZero ? 1 : parseInt(e?.Length),
-      width: checkIfZero ? 1 : parseInt(e?.Width),
-      height: checkIfZero ? 1 : parseInt(e?.Height),
-      weight: e?.Weight ? parseInt(e?.Weight) : "",
-      stackable: "Y", // hardcode
-      turnable: "Y", // hardcode
-    };
-  });
+  const cargo = shipmentDesc
+    .map((e) => {
+      const checkIfZero =
+        parseInt(e?.Length != "" ? e?.Length : 0) +
+          parseInt(e?.Width != "" ? e?.Width : 0) +
+          parseInt(e?.Height != "" ? e?.Height : 0) ===
+        0
+          ? true
+          : false;
+      return {
+        packageType:
+          e.FK_PieceTypeId === "BOX"
+            ? "BOX"
+            : e.FK_PieceTypeId === "PLT"
+            ? "PAL"
+            : "PIE",
+        quantity: e?.Pieces ?? "",
+        length: checkIfZero ? 1 : parseInt(e?.Length),
+        width: checkIfZero ? 1 : parseInt(e?.Width),
+        height: checkIfZero ? 1 : parseInt(e?.Height),
+        weight: e?.Weight ? parseInt(e?.Weight) : "",
+        stackable: "Y", // hardcode
+        turnable: "Y", // hardcode
+      };
+    })
+    .filter((e) => e.quantity != "" && e.quantity != 0 && e.quantity != "0");
   const FK_OrderNoListForIns = [
     ...new Set(shipmentApar.map((e) => e.FK_OrderNo)),
   ];
@@ -484,7 +489,10 @@ function validateAndCheckIfDataSentToIvia(payload, ConsolNo) {
           })[0];
 
           //checking if the latest table payload is same with prepared payload
-          if (errorObj.data != JSON.stringify(payload)) {
+          if (
+            errorObj.hasOwnProperty("data") &&
+            errorObj.data != JSON.stringify(payload)
+          ) {
             //check for if we have validation error
             if (errorMsg != "") {
               resolve({ check: false, errorMsg: errorMsg, isError: true });

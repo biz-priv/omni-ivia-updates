@@ -66,6 +66,9 @@ const loadMultistopConsole = async (dynamoData, shipmentAparData) => {
    * Ignore the event if there is no OrderDate or it is "1900
    */
   if (!checkIfShipmentHeaderOrderDatePass(shipmentHeader)) {
+    console.log(
+      "event IGNORED shipmentHeader.OrderDate LESS THAN 2023:04:01 00:00:00 "
+    );
     return {};
   }
 
@@ -385,7 +388,8 @@ function getCargoData(shipmentDesc, ele) {
         stackable: "Y", // hardcode
         turnable: "Y", // hardcode
       };
-    });
+    })
+    .filter((e) => e.quantity != "" && e.quantity != 0 && e.quantity != "0");
 }
 
 /**
@@ -434,7 +438,10 @@ function validateAndCheckIfDataSentToIvia(payload, ConsolNo) {
             return x.InsertedTimeStamp < y.InsertedTimeStamp ? 1 : -1;
           })[0];
 
-          if (errorObj.data != JSON.stringify(payload)) {
+          if (
+            errorObj.hasOwnProperty("data") &&
+            errorObj.data != JSON.stringify(payload)
+          ) {
             if (errorMsg != "") {
               resolve({ check: false, errorMsg: errorMsg, isError: true });
             } else {
