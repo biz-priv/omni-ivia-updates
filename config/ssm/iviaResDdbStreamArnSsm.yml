@@ -1,0 +1,10 @@
+IviaResponseDynamoTableStreamArn:
+  Type: AWS::SSM::Parameter
+  DependsOn: IviaResponseDynamoTable
+  Properties:
+    Name: /omni-ivia/${self:provider.stage}/iviaResponse/ddb.streamArn
+    Type: String
+    Value:
+      Fn::GetAtt:
+        - IviaResponseDynamoTable
+        - StreamArn

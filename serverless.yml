@@ -84,4 +84,4 @@ resources:
     ErrorNotification: ${file(config/sns/errorNotificationTopicSns.yml):ErrorNotification}
     
     # ssm parameter
-    IviaResponseDynamoTableStreamArn: ${file(config/dynamoDB/iviaResponse.yaml):IviaResponseDynamoTableStreamArn}
+    IviaResponseDynamoTableStreamArn: ${file(config/ssm/iviaResDdbStreamArnSsm.yml):IviaResponseDynamoTableStreamArn}
