@@ -18,3 +18,16 @@ IviaResponseDynamoTable:
             KeyType: "HASH"
         Projection:
           ProjectionType: "ALL"
+    StreamSpecification:
+      StreamViewType: NEW_AND_OLD_IMAGES
+
+
+IviaResponseDynamoTableStreamArn:
+  Type: AWS::SSM::Parameter
+  Properties:
+    Name: /omni-ivia/${self:provider.stage}/iviaResponse/ddb.streamArn
+    Type: String
+    Value:
+      Fn::GetAtt:
+        - IviaResponseDynamoTable
+        - StreamArn
