@@ -13,6 +13,4 @@ function:
   events:
     - stream: ${ssm:/omni-ivia/${self:provider.stage}/iviaResponse/ddb.streamArn}
   environment:
-    IVIA_CREATE_SHIPMENT_URL: ${ssm:/omni-ivia/${self:provider.stage}/createShipment/url}
-    IVIA_CREATE_SHIPMENT_TOKEN: ${ssm:/omni-ivia/${self:provider.stage}/createShipment/token}
     GET_DOCUMENT_API: ${ssm:/omni-dw/${self:provider.stage}/websli/api/url}
