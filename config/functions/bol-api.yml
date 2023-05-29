@@ -14,3 +14,8 @@ function:
     - stream: ${ssm:/omni-ivia/${self:provider.stage}/iviaResponse/ddb.streamArn}
   environment:
     GET_DOCUMENT_API: ${ssm:/omni-dw/${self:provider.stage}/websli/api/url}
+    BOL_API: ${ssm:/omni-ivia/${self:provider.stage}/bol-api/url}
+    BOL_API_AUTH_TOKEN: ${ssm:/omni-ivia/${self:provider.stage}/bol-api/authorization/token~true}
+    ADD_DOCUMENT_LOGS_TABLE: ${ssm:/omni-dw/${self:provider.stage}/addDocumentLog/table~true}
+    SHIPMENT_HEADER_INDEX: ${ssm:/omni-dw/dev/shipment-header-index/ddb.tableIndex}
+    SHIPMENT_HEADER_TABLE: ${ssm:/omni-dw/dev/shipment-header/ddb.tableName}

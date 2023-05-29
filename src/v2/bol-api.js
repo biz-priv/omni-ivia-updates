@@ -1,25 +1,26 @@
 const AWS = require("aws-sdk");
 const axios = require("axios");
-const { putItem, updateItem } = require("../shared/dynamo");
-const { validatePayload, getStatus } = require("../shared/dataHelper");
+const momentTZ = require("moment-timezone");
+const { putItem } = require("../shared/dynamo");
 const fs = require('fs');
 const FormData = require('form-data');
+const { v4: uuidv4 } = require('uuid');
+const Flatted = require('flatted');
 
 
-
-exports.handler = async (event, context, callback) => {
+module.exports.handler = async (event, context, callback) => {
     try {
         console.log('event', JSON.stringify(event));
         const records = event.Records;
 
-        records.forEach(async (record) => {
+        const promises = records.map(async (record) => {
             try {
                 if (!record.dynamodb.hasOwnProperty('NewImage')) {
                     return;
                 }
 
                 const newImage = AWS.DynamoDB.Converter.unmarshall(record.dynamodb.NewImage);
-                const { FK_OrderNo, Housebill, shipmentApiRes } = newImage;
+                const { Housebill, shipmentApiRes } = newImage;
                 console.log("shipmentApiRes:", shipmentApiRes);
                 const parsedShipmentApiRes = JSON.parse(shipmentApiRes);
                 const Id = parsedShipmentApiRes.shipmentId;
@@ -28,15 +29,43 @@ exports.handler = async (event, context, callback) => {
                 console.log("housebills:", housebills);
 
                 for (const housebill of housebills) {
-                    const base64String = await callWtRestApi(housebill);
-                    const filePath = `"/tmp/"${housebill}.pdf`;
-                    await convertBase64ToPdf(base64String, filePath);
-                    await sendPdfToIviaBolApi(filePath, 1014524);
+                    try {
+                        const { b64str, api_status_code, Res } = await callWtRestApi(housebill);
+                        const filePath = `"/tmp/"${housebill}.pdf`;
+                        await convertBase64ToPdf(b64str, filePath);
+                        const { errorMsg, responseStatus } = await sendPdfToIviaBolApi(filePath, Id);
+                        // const { errorMsg, responseStatus } = await sendPdfToIviaBolApi(filePath, 1014524);
+                        const insertedTimeStamp = momentTZ
+                            .tz("America/Chicago")
+                            .format("YYYY:MM:DD HH:mm:ss")
+                            .toString();
+                        const jsonWebsliResponse = Flatted.stringify(Res);
+                        orderNo = await queryTableWithIndex(housebill);
+                        console.log("orderNo:", orderNo);
+                        const logItem = {
+                            Id: uuidv4(),
+                            api_status_code: responseStatus,
+                            errorMsg: errorMsg,
+                            housebill: housebill,
+                            inserted_time_stamp: insertedTimeStamp,
+                            PK_OrderNo: orderNo,
+                            iviaShipmentId: Id,
+                            filename: `${housebill}.pdf`,
+                            function_name: context.functionName,
+                            webSli_request: jsonWebsliResponse,
+                            webSli_response_code: api_status_code
+                        };
+                        console.log("logItem:", logItem);
+                        await putItem(process.env.ADD_DOCUMENT_LOGS_TABLE, logItem);
+                    } catch (error) {
+                        console.error('Error in inner loop', error);
+                    }
                 }
             } catch (error) {
-                console.error('Error in forEach loop', error);
+                console.error('Error in outer loop', error);
             }
         });
+        await Promise.all(promises);
         return 'success';
     } catch (error) {
         console.error('Error', error);
@@ -44,18 +73,24 @@ exports.handler = async (event, context, callback) => {
     }
 };
 
+// function to call get document websli api
 async function callWtRestApi(housebill) {
     try {
         const url = `${process.env.GET_DOCUMENT_API}/housebill=${housebill}/doctype=HOUSEBILL`;
 
         const response = await axios.get(url);
-        return response.data.wtDocs.wtDoc[0].b64str;
+        return {
+            b64str: response.data.wtDocs.wtDoc[0].b64str,
+            api_status_code: response.status,
+            Res: response
+        };
     } catch (error) {
         console.error(`Error calling WT REST API for housebill ${housebill}:`, error);
-        throw error;
+        return 'error';
     }
 }
 
+// function to convert base64 string to pdf
 function convertBase64ToPdf(base64String, filePath) {
     return new Promise((resolve, reject) => {
         const fileData = Buffer.from(base64String, 'base64');
@@ -70,31 +105,58 @@ function convertBase64ToPdf(base64String, filePath) {
 }
 
 // Function to send the PDF to Ivia BOL API
-function sendPdfToIviaBolApi(filePath, Id) {
-    return new Promise((resolve, reject) => {
-        const formData = new FormData();
-        formData.append('file', fs.createReadStream(filePath));
+async function sendPdfToIviaBolApi(filePath, Id) {
+    const formData = new FormData();
+    formData.append('file', fs.createReadStream(filePath));
 
-        const config = {
-            method: 'post',
-            maxBodyLength: Infinity,
-            url: `https://uat-api.dev.ivia.us/shipments/${Id}/documents`,
-            headers: {
-                'Authorization': 'Bearer eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJvY2N1cnJlZF9vbiI6MTY3OTA0Njk1MjU1NSwidXNlcl9pZCI6MTAwMzk3NSwib3JnX2lkIjoxMDA0NDUxLCJwZXJtaXNzaW9ucyI6W251bGxdLCJzY29wZSI6WyJhcGkiXSwib3Blbl9hcGlfaWQiOiJkNDM2NGRhYy05ZGRhLTRmZDUtYWYyYS04ZGNmYTVjMjA5MzUiLCJvcGVuX2FwaV91c2VyX2lkIjoxMDA0MzY1LCJleHAiOjI2NzkwNDY5NTEsInJlZ2lvbiI6Ik5BIiwianRpIjoiZGVmMzUwYWMtM2IxMS00ZmFlLThlYTEtNGJiYjkxMGE0ZWY5IiwiY2xpZW50X2lkIjoib3Blbi1hcGkifQ.ObNVtPzX2ih6qRt2SPGb_xIQXX_lHzB47NhzHAXkKfJ4Kk70C6W0bYijZCifVDdKUclqsGUv29IhWhj3jIk0yzbGjLYq5YkYMipqh3ZS1wF_D_ehG3Rc17cuOeiY1q4Exmd8oaLU-fNDAbInkFhdqsZBf51Lh-Ytu1zCaxUnPLtLTK-9QZxVAYMnTt9nDupwrR62gsomtUSSOVQgitwpVElf7SJjvpM2_Hv30t9BkpEnXIvr9xrcOUmEg6OE3-evIUS1ymN-v23oxSbgLxoHtpDOdrpQ6BdAz-4CQdUn0U1q7qx8Q6vCf7inDWP8bJXRlKl2aP-B3ou1PWbhE-IwVw',
-                'Content-Type': 'multipart/form-data',
-                ...formData.getHeaders()
+    const config = {
+        method: 'post',
+        maxBodyLength: Infinity,
+        url: `${process.env.BOL_API}/shipments/${Id}/documents`,
+        headers: {
+            'Authorization': `Bearer ${process.env.BOL_API_AUTH_TOKEN}`,
+            'Content-Type': 'multipart/form-data',
+            ...formData.getHeaders()
+        },
+        data: formData
+    };
+
+    try {
+        const response = await axios.request(config);
+        console.log('PDF sent to Ivia BOL API');
+        return {
+            success: true,
+            errorMsg: "",
+            responseStatus: response.status
+        };
+    } catch (error) {
+        console.error('Error sending PDF to Ivia BOL API:', error.response.data);
+        return {
+            success: false,
+            errorMsg: error.response.data.errors[0].message,
+            responseStatus: error.response.status
+        };
+    }
+}
+
+
+async function queryTableWithIndex(housebill) {
+    try {
+        const params = {
+            TableName: process.env.SHIPMENT_HEADER_TABLE,
+            IndexName: process.env.SHIPMENT_HEADER_INDEX,
+            KeyConditionExpression: 'Housebill = :housebillValue',
+            ExpressionAttributeValues: {
+                ':housebillValue': housebill
             },
-            data: formData
         };
 
-        axios.request(config)
-            .then((response) => {
-                console.log('PDF sent to Ivia BOL API');
-                resolve();
-            })
-            .catch((error) => {
-                console.error('Error sending PDF to Ivia BOL API:', error);
-                reject(error);
-            });
-    });
+        const dynamodb = new AWS.DynamoDB.DocumentClient();
+        const result = await dynamodb.query(params).promise();
+
+        return result.Items[0].PK_OrderNo;
+    } catch (error) {
+        console.error('Error querying table:', error);
+        throw error;
+    }
 }
