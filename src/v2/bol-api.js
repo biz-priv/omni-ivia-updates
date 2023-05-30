@@ -31,7 +31,7 @@ module.exports.handler = async (event, context, callback) => {
                 for (const housebill of housebills) {
                     try {
                         const { b64str, api_status_code, Res } = await callWtRestApi(housebill);
-                        const filePath = `"/tmp/"${housebill}.pdf`;
+                        const filePath = `/tmp/${housebill}.pdf`;
                         await convertBase64ToPdf(b64str, filePath);
                         const { errorMsg, responseStatus } = await sendPdfToIviaBolApi(filePath, Id);
                         // const { errorMsg, responseStatus } = await sendPdfToIviaBolApi(filePath, 1014524);
@@ -40,7 +40,7 @@ module.exports.handler = async (event, context, callback) => {
                             .format("YYYY:MM:DD HH:mm:ss")
                             .toString();
                         const jsonWebsliResponse = Flatted.stringify(Res);
-                        orderNo = await queryTableWithIndex(housebill);
+                        const orderNo = await queryTableWithIndex(housebill);
                         console.log("orderNo:", orderNo);
                         const logItem = {
                             Id: uuidv4(),
@@ -139,7 +139,7 @@ async function sendPdfToIviaBolApi(filePath, Id) {
     }
 }
 
-
+// function to fetch orderNo for the particular housebill 
 async function queryTableWithIndex(housebill) {
     try {
         const params = {
