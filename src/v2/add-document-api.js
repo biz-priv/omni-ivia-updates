@@ -76,7 +76,7 @@ module.exports.handler = async (event, context, callback) => {
 // function to call get document websli api
 async function callWtRestApi(housebill) {
     try {
-        const url = `${process.env.GET_DOCUMENT_API}/housebill=${housebill}/doctype=HOUSEBILL`;
+        const url = `${process.env.WT_WEBSLI_API_URL}/housebill=${housebill}/doctype=HOUSEBILL`;
 
         const response = await axios.get(url);
         return {
