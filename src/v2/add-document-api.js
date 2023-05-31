@@ -33,8 +33,8 @@ module.exports.handler = async (event, context, callback) => {
                         const { b64str, api_status_code, Res } = await callWtRestApi(housebill);
                         const filePath = `/tmp/${housebill}.pdf`;
                         await convertBase64ToPdf(b64str, filePath);
-                        const { errorMsg, responseStatus } = await sendPdfToIviaBolApi(filePath, Id);
-                        // const { errorMsg, responseStatus } = await sendPdfToIviaBolApi(filePath, 1014524);
+                        const { errorMsg, responseStatus } = await sendPdfToIviaAddDocumentApi(filePath, Id);
+                        // const { errorMsg, responseStatus } = await sendPdfToIviaAddDocumentApi(filePath, 1014524);
                         const insertedTimeStamp = momentTZ
                             .tz("America/Chicago")
                             .format("YYYY:MM:DD HH:mm:ss")
@@ -104,17 +104,17 @@ function convertBase64ToPdf(base64String, filePath) {
     });
 }
 
-// Function to send the PDF to Ivia BOL API
-async function sendPdfToIviaBolApi(filePath, Id) {
+// Function to send the PDF to Ivia AddDocument API
+async function sendPdfToIviaAddDocumentApi(filePath, Id) {
     const formData = new FormData();
     formData.append('file', fs.createReadStream(filePath));
 
     const config = {
         method: 'post',
         maxBodyLength: Infinity,
-        url: `${process.env.BOL_API}/shipments/${Id}/documents`,
+        url: `${process.env.ADD_DOCUMENT_API_URL}/${Id}/documents`,
         headers: {
-            'Authorization': `Bearer ${process.env.BOL_API_AUTH_TOKEN}`,
+            'Authorization': `Bearer ${process.env.ADD_DOCUMENT_AUTH_TOKEN}`,
             'Content-Type': 'multipart/form-data',
             ...formData.getHeaders()
         },
@@ -123,14 +123,14 @@ async function sendPdfToIviaBolApi(filePath, Id) {
 
     try {
         const response = await axios.request(config);
-        console.log('PDF sent to Ivia BOL API');
+        console.log('PDF sent to Ivia AddDocument API');
         return {
             success: true,
             errorMsg: "",
             responseStatus: response.status
         };
     } catch (error) {
-        console.error('Error sending PDF to Ivia BOL API:', error.response.data);
+        console.error('Error sending PDF to Ivia AddDocument API:', error.response.data);
         return {
             success: false,
             errorMsg: error.response.data.errors[0].message,
