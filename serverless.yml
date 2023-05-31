@@ -75,6 +75,7 @@ layers:
 functions:
   iviaSqsToDynamoDB: ${file(config/functions/iviaSqsToDynamoDB.yml):function}
   create-shipment: ${file(config/functions/create-shipment.yml):function}
+  add-document-api: ${file(config/functions/add-document.yml):function}
 
 resources:
   Resources:
