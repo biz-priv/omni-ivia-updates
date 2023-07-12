@@ -1,0 +1,23 @@
+---
+function:
+  name: omni-ivia-add-document-api-${self:provider.stage}
+  handler: src/v2/add-document-api.handler
+  layers:
+    - { Ref: OmniIviaLayerLambdaLayer }
+  package:
+    include:
+      - "src/v2/add-document-api.js"
+      - "src/shared/**"
+    exclude:
+      - "**/*"
+  events:
+    - stream: ${ssm:/omni-ivia/${self:provider.stage}/iviaResponse/ddb.streamArn}
+  environment:
+    WT_WEBSLI_API_URL: ${ssm:/omni-dw/${self:provider.stage}/websli/api/url} #To do check for values for PROD
+    ADD_DOCUMENT_API_URL: ${ssm:/omni-ivia/${self:provider.stage}/add-document-api/url} #To do check for values for PROD
+    ADD_DOCUMENT_AUTH_TOKEN: ${ssm:/omni-ivia/${self:provider.stage}/add-document-api/authorization/token~true} #To do check for values for PROD
+    ADD_DOCUMENT_LOGS_TABLE: ${ssm:/omni-dw/${self:provider.stage}/addDocumentLog/table~true}
+    SHIPMENT_HEADER_INDEX: ${ssm:/omni-dw/${self:provider.stage}/shipment-header-index/ddb.tableIndex}
+    SHIPMENT_HEADER_TABLE: ${ssm:/omni-dw/${self:provider.stage}/shipment-header/ddb.tableName}
+    ERROR_SNS_ARN: ${ssm:/omni-reports/${self:provider.stage}/error-notification/sns/arn}
+    FUNCTION_NAME: omni-ivia-add-document-api-${self:provider.stage}    
