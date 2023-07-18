@@ -273,6 +273,7 @@ const loadMultistopConsole = async (dynamoData, shipmentAparData) => {
   for (let index = 0; index < margedStops.length; index++) {
     const element = margedStops[index];
     const addressData = await checkAddressByGoogleApi(element.address);
+    const cutoffDateDiff = await getGMTDiff(element.cutoffDate, addressData);
     console.log("addressData", addressData);
     stopsList = [
       ...stopsList,
@@ -280,8 +281,7 @@ const loadMultistopConsole = async (dynamoData, shipmentAparData) => {
         ...element,
         address: addressData,
         scheduledDate: await getGMTDiff(element.scheduledDate, addressData),
-        cutoffDate: await getGMTDiff(element.cutoffDate, addressData) != ""? 
-        await getGMTDiff(element.cutoffDate, addressData): "0"
+        cutoffDate: cutoffDateDiff !== "" ? cutoffDateDiff : "0",
       },
     ];
   }

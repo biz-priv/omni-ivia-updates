@@ -54,7 +54,7 @@ const loadP2PNonConsol = async (dynamoData, shipmentAparData) => {
    * shipmentDesc
    */
   const dataSet = await fetchDataFromTables(tableList, primaryKeyValue);
-  console.log("dataSet", JSON.stringify(dataSet));
+ // console.log("dataSet", JSON.stringify(dataSet));
 
   const shipmentApar = shipmentAparData;
   const shipmentHeader = dataSet.shipmentHeader;
@@ -325,8 +325,8 @@ const loadP2PNonConsol = async (dynamoData, shipmentAparData) => {
         revenue: +parseFloat(total).toFixed(2)?? "",
     },
   };
-  console.log("iviaPayload", JSON.stringify(iviaPayload));
-  return
+  console.info("iviaPayload", JSON.stringify(iviaPayload));
+
   /**
    * validate the payload and check if it is already processed
    */
