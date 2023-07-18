@@ -26,6 +26,7 @@ const {
   SHIPMENT_DESC_TABLE,
   CONSOL_STOP_HEADERS,
   CONSOL_STOP_ITEMS,
+  CUSTOMER_TABLE,
   INSTRUCTIONS_INDEX_KEY_NAME,
   IVIA_DDB,
   IVIA_VENDOR_ID,
@@ -46,16 +47,17 @@ const loadMultistopConsole = async (dynamoData, shipmentAparData) => {
    * shipmentApar
    * shipmentInstructions
    * shipmentHeader
+   * customer
    * shipmentDesc
    * consolStopHeaders
    * consolStopItems
    */
   const dataSet = await fetchDataFromTablesList(CONSOL_NO);
-  // console.log("dataSet", JSON.stringify(dataSet));
-
+  console.log("dataSet", JSON.stringify(dataSet));
   const shipmentApar = dataSet.shipmentApar;
   const shipmentHeader = dataSet.shipmentHeader;
   const shipmentDesc = dataSet.shipmentDesc;
+  const customer = dataSet.customer.length > 0 ? dataSet.customer[0] : {};
   const consolStopHeaders = dataSet.consolStopHeaders;
   const consolStopItems = dataSet.consolStopItems;
   const shipmentInstructions = dataSet.shipmentInstructions;
@@ -146,9 +148,9 @@ const loadMultistopConsole = async (dynamoData, shipmentAparData) => {
     spInsMsg +=
       csh.ConsolStopTimeEnd > csh.ConsolStopTimeBegin
         ? "between " +
-          moment(csh.ConsolStopTimeBegin).format("HH:mm") +
-          " and " +
-          moment(csh.ConsolStopTimeEnd).format("HH:mm")
+        moment(csh.ConsolStopTimeBegin).format("HH:mm") +
+        " and " +
+        moment(csh.ConsolStopTimeEnd).format("HH:mm")
         : "at " + moment(csh.ConsolStopTimeBegin).format("HH:mm");
 
     /**
@@ -177,13 +179,14 @@ const loadMultistopConsole = async (dynamoData, shipmentAparData) => {
         "\r\n" +
         (csh?.ConsolStopContact.length > 0 || csh?.ConsolStopPhone.length > 0
           ? "Contact " +
-            csh?.ConsolStopContact +
-            " " +
-            csh?.ConsolStopPhone +
-            "\r\n"
+          csh?.ConsolStopContact +
+          " " +
+          csh?.ConsolStopPhone +
+          "\r\n"
           : "") +
         csh.ConsolStopNotes
       ).slice(0, 200),
+      cutoffDate: shipmentHeader[0]?.ReadyDateTimeRange?? "",
     };
     return stopPayload;
   });
@@ -215,9 +218,9 @@ const loadMultistopConsole = async (dynamoData, shipmentAparData) => {
     spInsMsg +=
       csh.ConsolStopTimeEnd > csh.ConsolStopTimeBegin
         ? "between " +
-          moment(csh.ConsolStopTimeBegin).format("HH:mm") +
-          " and " +
-          moment(csh.ConsolStopTimeEnd).format("HH:mm")
+        moment(csh.ConsolStopTimeBegin).format("HH:mm") +
+        " and " +
+        moment(csh.ConsolStopTimeEnd).format("HH:mm")
         : "at " + moment(csh.ConsolStopTimeBegin).format("HH:mm");
 
     /**
@@ -245,13 +248,14 @@ const loadMultistopConsole = async (dynamoData, shipmentAparData) => {
         "\r\n" +
         (csh?.ConsolStopContact.length > 0 || csh?.ConsolStopPhone.length > 0
           ? "Contact " +
-            csh?.ConsolStopContact +
-            " " +
-            csh?.ConsolStopPhone +
-            "\r\n"
+          csh?.ConsolStopContact +
+          " " +
+          csh?.ConsolStopPhone +
+          "\r\n"
           : "") +
         csh.ConsolStopNotes
       ).slice(0, 200),
+      cutoffDate: shipmentHeader[0].ScheduledBy == "T" ? shipmentHeader[0].ScheduledDateTimeRange : "0",
     };
     return stopPayload;
   });
@@ -276,6 +280,8 @@ const loadMultistopConsole = async (dynamoData, shipmentAparData) => {
         ...element,
         address: addressData,
         scheduledDate: await getGMTDiff(element.scheduledDate, addressData),
+        cutoffDate: await getGMTDiff(element.cutoffDate, addressData) != ""? 
+        await getGMTDiff(element.cutoffDate, addressData): "0"
       },
     ];
   }
@@ -287,11 +293,23 @@ const loadMultistopConsole = async (dynamoData, shipmentAparData) => {
     ORDER_NO_LIST.includes(e.FK_OrderNo)
   );
 
+  let totalArray = []
+  for (let i = 0; i < shipmentApar.length; i++) {
+    const element = shipmentApar[i].Total;
+    totalArray.push(element)
+  }
+  
+  const total = totalArray.reduce((accumulator, currentValue) => {
+    return accumulator + parseFloat(currentValue);
+  }, 0);
+
+
   const iviaPayload = {
     carrierId: IVIA_CARRIER_ID, // IVIA_CARRIER_ID = 1000025
     refNums: {
       refNum1: CONSOL_NO ?? "", //shipmentApar.ConsolNo
-      refNum2: "", //ignore
+      refNum2: customer?.CustName?.slice(0,19) ?? "", //ignore
+      refNum3: shipmentHeader[0].ControllingStation ?? ""
     },
     shipmentDetails: {
       stops: sortObjByStopNo(stopsList, "stopNum"),
@@ -300,6 +318,7 @@ const loadMultistopConsole = async (dynamoData, shipmentAparData) => {
       liftGate: getLiftGate(shipmentAparCargo, shipmentHeader),
       unNum: getUnNum(filteredSD), // accepts only 4 degit number as string
       notes: equipment?.Description ?? "",
+      revenue: total ?? "",
     },
   };
   console.log("iviaPayload", JSON.stringify(iviaPayload));
@@ -369,7 +388,7 @@ function getCargoData(shipmentDesc, ele) {
         parseInt(e?.Length != "" ? e?.Length : 0) +
           parseInt(e?.Width != "" ? e?.Width : 0) +
           parseInt(e?.Height != "" ? e?.Height : 0) ===
-        0
+          0
           ? true
           : false;
 
@@ -378,8 +397,8 @@ function getCargoData(shipmentDesc, ele) {
           e.FK_PieceTypeId === "BOX"
             ? "BOX"
             : e.FK_PieceTypeId === "PLT"
-            ? "PAL"
-            : "PIE",
+              ? "PAL"
+              : "PIE",
         quantity: e?.Pieces ?? "",
         length: checkIfZero ? 1 : parseInt(e?.Length),
         width: checkIfZero ? 1 : parseInt(e?.Width),
@@ -630,6 +649,24 @@ async function fetchDataFromTablesList(CONSOL_NO) {
       console.log("equipment", eqData);
     }
 
+    /**
+    * CUSTOMER_TABLE
+    */
+    let customer = []
+    if (
+      shipmentHeader.length > 0 &&
+      shipmentHeader[0].BillNo != ""
+    ) {
+      const customerParam = {
+        TableName: CUSTOMER_TABLE,
+        KeyConditionExpression: "PK_CustNo = :PK_CustNo",
+        ExpressionAttributeValues: {
+          ":PK_CustNo": shipmentHeader[0].BillNo,
+        },
+      };
+      customer = await ddb.query(customerParam).promise();
+      customer = customer.Items;
+    }
     return {
       shipmentApar,
       shipmentInstructions,
@@ -639,6 +676,7 @@ async function fetchDataFromTablesList(CONSOL_NO) {
       consolStopItems,
       shipmentAparCargo,
       equipment,
+      customer,
     };
   } catch (error) {
     console.log("error", error);

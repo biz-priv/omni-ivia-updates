@@ -23,6 +23,7 @@ const {
   SHIPMENT_HEADER_TABLE,
   SHIPMENT_DESC_TABLE,
   CONFIRMATION_COST,
+  CUSTOMER_TABLE,
   CONFIRMATION_COST_INDEX_KEY_NAME,
   IVIA_DDB,
   IVIA_VENDOR_ID,
@@ -56,6 +57,7 @@ const loadP2PConsole = async (dynamoData, shipmentAparData) => {
   const shipmentDesc = dataSet.shipmentDesc;
   const shipmentInstructions = dataSet.shipmentInstructions;
   const equipment = dataSet.equipment.length > 0 ? dataSet.equipment[0] : {};
+  const customer = dataSet.customer.length > 0 ? dataSet.customer[0] : {};
 
   /**
    * we need to check in the shipmentHeader.OrderDate >= '2023:04:01 00:00:00' - for both nonconsol and consol -> if this condition satisfies, we send the event to Ivia, else we ignore
@@ -163,6 +165,7 @@ const loadP2PConsole = async (dynamoData, shipmentAparData) => {
           "\r\n"
         : "")
     ).slice(0, 200),
+    cutoffDate:"",
   };
 
   const ptypeAddressData = await checkAddressByGoogleApi(pStopTypeData.address);
@@ -171,7 +174,10 @@ const loadP2PConsole = async (dynamoData, shipmentAparData) => {
     confirmationCost?.PickupDateTime ?? "",
     ptypeAddressData
   );
-
+  pStopTypeData.cutoffDate = await getGMTDiff(
+    shipmentHeader[0].ReadyDateTimeRange,
+    ptypeAddressData
+  ); 
   /**
    * preparing delivery type stope obj from table ConfirmationCost
    * based on shipmentAPAR.FK_OrderNo and shipmentAPAR.FK_SeqNo
@@ -207,6 +213,7 @@ const loadP2PConsole = async (dynamoData, shipmentAparData) => {
         : "") +
       (confirmationCost?.DeliveryNote ?? "")
     ).slice(0, 200),
+    cutoffDate:"",
   };
   const dtypeAddressData = await checkAddressByGoogleApi(dStopTypeData.address);
   dStopTypeData.address = dtypeAddressData;
@@ -214,13 +221,25 @@ const loadP2PConsole = async (dynamoData, shipmentAparData) => {
     confirmationCost?.DeliveryDateTime ?? "",
     dtypeAddressData
   );
+    if (shipmentHeader[0].ScheduledBy == "T"){
+      dStopTypeData.cutoffDate = await getGMTDiff(
+        shipmentHeader[0].ScheduledDateTimeRange,
+        ptypeAddressData
+      );  
+    }
+    else{
+      dStopTypeData.cutoffDate = '0'  
+    }
+
+    const total = shipmentApar[0].Total
 
   //IVIA payload
   const iviaPayload = {
     carrierId: IVIA_CARRIER_ID, //IVIA_CARRIER_ID = dev 1000025 stage = 102
     refNums: {
       refNum1: CONSOL_NO, //shipmentApar.ConsolNo
-      refNum2: "", // ignore
+      refNum2: customer?.CustName?.slice(0,19) ?? "", // ignore
+      refNum3: shipmentHeader[0].ControllingStation ?? "",
     },
     shipmentDetails: {
       stops: [pStopTypeData, dStopTypeData],
@@ -229,6 +248,7 @@ const loadP2PConsole = async (dynamoData, shipmentAparData) => {
       liftGate: getLiftGate(shipmentAparCargo, shipmentHeader),
       unNum: getUnNum(shipmentDesc), // accepts only 4 degit number as string
       notes: equipment?.Description ?? "",
+      revenue: +parseFloat(total).toFixed(2) ?? "",
     },
   };
   console.log("iviaPayload", JSON.stringify(iviaPayload));
@@ -427,6 +447,28 @@ async function fetchDataFromTablesList(CONSOL_NO) {
       equipment = eqData.Items;
       console.log("equipment", eqData);
     }
+
+     /**
+     * CUSTOMER_TABLE
+     */
+     let customer = []
+     if (
+       shipmentHeader.length > 0 &&
+       shipmentHeader[0].BillNo != ""
+     ) {
+       const customerParam = {
+         TableName: CUSTOMER_TABLE,
+         KeyConditionExpression: "PK_CustNo = :PK_CustNo",
+         ExpressionAttributeValues: {
+           ":PK_CustNo":shipmentHeader[0].BillNo,
+         },
+       };
+ 
+       customer = await ddb.query(customerParam).promise();
+       customer = customer.Items;
+     }
+     
+ 
     return {
       shipmentApar,
       confirmationCost,
@@ -435,6 +477,7 @@ async function fetchDataFromTablesList(CONSOL_NO) {
       shipmentAparCargo,
       shipmentInstructions,
       equipment,
+      customer
     };
   } catch (error) {
     console.log("error", error);
