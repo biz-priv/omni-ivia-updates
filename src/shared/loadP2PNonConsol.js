@@ -27,6 +27,7 @@ const {
   CONFIRMATION_COST_INDEX_KEY_NAME,
   CONSIGNEE_TABLE,
   SHIPPER_TABLE,
+  CUSTOMER_TABLE,
   INSTRUCTIONS_TABLE,
   INSTRUCTIONS_INDEX_KEY_NAME,
   IVIA_DDB,
@@ -53,7 +54,7 @@ const loadP2PNonConsol = async (dynamoData, shipmentAparData) => {
    * shipmentDesc
    */
   const dataSet = await fetchDataFromTables(tableList, primaryKeyValue);
-  console.log("dataSet", JSON.stringify(dataSet));
+ // console.log("dataSet", JSON.stringify(dataSet));
 
   const shipmentApar = shipmentAparData;
   const shipmentHeader = dataSet.shipmentHeader;
@@ -61,6 +62,7 @@ const loadP2PNonConsol = async (dynamoData, shipmentAparData) => {
   const shipper = dataSet.shipper.length > 0 ? dataSet.shipper[0] : {};
   const shipmentInstructions = dataSet.shipmentInstructions;
   const equipment = dataSet.equipment.length > 0 ? dataSet.equipment[0] : {};
+  const customer = dataSet.customer.length > 0 ? dataSet.customer[0] : {};
 
   /**
    * we need to check in the shipmentHeader.OrderDate >= '2023:04:01 00:00:00' - for both nonconsol and consol -> if this condition satisfies, we send the event to Ivia, else we ignore
@@ -214,6 +216,7 @@ const loadP2PNonConsol = async (dynamoData, shipmentAparData) => {
         : "") +
       ptype.PickupNote
     ).slice(0, 200),
+    cutoffDate:"",
   };
 
   const ptypeAddressData = await checkAddressByGoogleApi(pStopTypeData.address);
@@ -222,6 +225,11 @@ const loadP2PNonConsol = async (dynamoData, shipmentAparData) => {
     ptype.PickupDateTime,
     ptypeAddressData
   );
+
+    pStopTypeData.cutoffDate = await getGMTDiff(
+      shipmentHeader[0].ReadyDateTimeRange,
+      ptypeAddressData
+    );
 
   /**
    * preparing delivery type stop obj from table ConfirmationCost based on shipmentAPAR.FK_OrderNo
@@ -266,6 +274,7 @@ const loadP2PNonConsol = async (dynamoData, shipmentAparData) => {
         : "") +
       dtype.DeliveryNote
     ).slice(0, 200),
+    cutoffDate:"",
   };
 
   const dtypeAddressData = await checkAddressByGoogleApi(dStopTypeData.address);
@@ -275,6 +284,15 @@ const loadP2PNonConsol = async (dynamoData, shipmentAparData) => {
     dtypeAddressData
   );
 
+    if (dtype.ScheduledBy == "T"){
+      dStopTypeData.cutoffDate = await getGMTDiff(
+        shipmentHeader[0].ScheduledDateTimeRange,
+        ptypeAddressData
+      );
+    }
+    else{
+      dStopTypeData.cutoffDate = '0'
+    }
   /**
    * filtered shipmentDesc data based on shipmentApar.FK_OrderNo to get hazardous and unNum
    */
@@ -282,13 +300,15 @@ const loadP2PNonConsol = async (dynamoData, shipmentAparData) => {
   const filteredSD = shipmentDesc.filter((e) =>
     ORDER_NO_LIST.includes(e.FK_OrderNo)
   );
+  const total = dataSet.shipmentApar[0].Total
 
   //IVIA payload
   const iviaPayload = {
     carrierId: IVIA_CARRIER_ID, // IVIA_CARRIER_ID = dev 1000025 stage = 102
     refNums: {
       refNum1: housebill_delimited[0] ?? "", // tbl_shipmentHeader.pk_orderNo as hwb/ tbl_confirmationCost.consolNo(if it is a consol)
-      refNum2: "", //ignore
+      refNum2: customer?.CustName?.slice(0,19) ?? "", //customee name
+      refNum3: shipmentHeader[0].ControllingStation ?? "", //ControllingStation
     },
     shipmentDetails: {
       stops: [pStopTypeData, dStopTypeData],
@@ -302,9 +322,10 @@ const loadP2PNonConsol = async (dynamoData, shipmentAparData) => {
         moment(shipmentHeader?.[0]?.ReadyDateTime).format("HH:mm") +
         " close " +
         moment(shipmentHeader?.[0]?.CloseTime).format("HH:mm"),
+        revenue: +parseFloat(total).toFixed(2)?? "",
     },
   };
-  console.log("iviaPayload", JSON.stringify(iviaPayload));
+  console.info("iviaPayload", JSON.stringify(iviaPayload));
 
   /**
    * validate the payload and check if it is already processed
@@ -476,6 +497,12 @@ function getTablesAndPrimaryKey(tableName, dynamoData) {
         sortName: "shipper",
         type: "PRIMARY_KEY",
       },
+      [CUSTOMER_TABLE]: {
+        PK: "PK_CustNo",
+        SK: "",
+        sortName: "customer",
+        type: "PRIMARY_KEY",
+      },
     };
 
     const data = tableList[tableName];
@@ -598,6 +625,27 @@ async function fetchDataFromTables(tableList, primaryKeyValue) {
     }
     newObj.equipment = equipment;
 
+    /**
+     * CUSTOMER_TABLE
+     */
+    let customer = []
+    if (
+      newObj.shipmentHeader.length > 0 &&
+      newObj.shipmentHeader[0].BillNo != ""
+    ) {
+      const customerParam = {
+        TableName: CUSTOMER_TABLE,
+        KeyConditionExpression: "PK_CustNo = :PK_CustNo",
+        ExpressionAttributeValues: {
+          ":PK_CustNo":newObj.shipmentHeader[0].BillNo,
+        },
+      };
+
+      customer = await ddb.query(customerParam).promise();
+      customer = customer.Items;
+    }
+    newObj.customer = customer;
+
     return newObj;
   } catch (error) {
     console.log("error:fetchDataFromTables", error);
@@ -611,7 +659,8 @@ module.exports = { loadP2PNonConsol };
 //   "carrierId": 1000025, // hardcode  dev:- 1000025 stage:- 102
 //   "refNums": {
 //     "refNum1": "1234", //shipmentHeader.Housebill
-//     "refNum2": "" //
+//     "refNum2":  "", //customee name
+ //     "refNum3":  "", //ControllingStation
 //   },
 //   "shipmentDetails": {
 //     "stops": [
@@ -641,6 +690,7 @@ module.exports = { loadP2PNonConsol };
 //         ],
 //         "scheduledDate": 1637913600000, // check from code
 //         "specialInstructions": "" // check from code
+//          "cutoffDate": 1687437000000
 //       },
 //       {
 //         "stopType": "D", // hardcode D = delivery
@@ -656,11 +706,13 @@ module.exports = { loadP2PNonConsol };
 //         "companyName": "Freight Force PHL", // confirmationCost.ConName
 //         "scheduledDate": 1638176400000, // check from code
 //         "specialInstructions": "" // check from code
+//          "cutoffDate": 1687437000000
 //       }
 //     ],
 //     "dockHigh": "N", //  [Y / N] default "N"
 //     "hazardous": "N", //   shipmentDesc.Hazmat
 //     "liftGate": "N", //  shipmentApar.ChargeCode
 //     "unNum": "" //shipmentDesc.Description accepts only 4 degit number as string or empty string
-//   }
+//      "revenue":"408.00" //
+//}
 // }
