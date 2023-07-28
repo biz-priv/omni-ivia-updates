@@ -255,7 +255,7 @@ const loadMultistopConsole = async (dynamoData, shipmentAparData) => {
           : "") +
         csh.ConsolStopNotes
       ).slice(0, 200),
-      cutoffDate: shipmentHeader[0].ScheduledBy == "T" ? shipmentHeader[0].ScheduledDateTimeRange : "0",
+      cutoffDate: shipmentHeader[0].ScheduledBy == "T" ? shipmentHeader[0].ScheduledDateTimeRange : 0,
     };
     return stopPayload;
   });
@@ -281,7 +281,7 @@ const loadMultistopConsole = async (dynamoData, shipmentAparData) => {
         ...element,
         address: addressData,
         scheduledDate: await getGMTDiff(element.scheduledDate, addressData),
-        cutoffDate: cutoffDateDiff !== "" ? cutoffDateDiff : "0",
+        cutoffDate: cutoffDateDiff !== "" ? cutoffDateDiff : 0,
       },
     ];
   }
@@ -330,6 +330,7 @@ const loadMultistopConsole = async (dynamoData, shipmentAparData) => {
     iviaPayload,
     CONSOL_NO
   );
+ 
   if (!check) {
     //save to dynamo DB
     let houseBillList = [];
