@@ -291,7 +291,7 @@ const loadP2PNonConsol = async (dynamoData, shipmentAparData) => {
       );
     }
     else{
-      dStopTypeData.cutoffDate = '0'
+      dStopTypeData.cutoffDate = 0
     }
   /**
    * filtered shipmentDesc data based on shipmentApar.FK_OrderNo to get hazardous and unNum

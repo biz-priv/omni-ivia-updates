@@ -228,7 +228,7 @@ const loadP2PConsole = async (dynamoData, shipmentAparData) => {
       );  
     }
     else{
-      dStopTypeData.cutoffDate = '0'  
+      dStopTypeData.cutoffDate = 0  ;
     }
 
     const total = shipmentApar[0].Total
