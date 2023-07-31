@@ -152,6 +152,7 @@ function getUnNum(param) {
  * every field is required only refNum2, specialInstructions may be empty
  */
 function validatePayload(payload) {
+  console.log("payload before validation", JSON.stringify(payload))
   const Joi = require("joi");
   try {
     const joySchema = Joi.object({
@@ -204,6 +205,7 @@ function validatePayload(payload) {
               cutoffDate: Joi.number()
                 .integer()
                 .min(0)
+                .allow(null)
                 .required()
                 .messages({
                   "number.base": `"cutoffDate" must be a valid DATE and greater than 2023-01-01`,

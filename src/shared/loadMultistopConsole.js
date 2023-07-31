@@ -255,7 +255,7 @@ const loadMultistopConsole = async (dynamoData, shipmentAparData) => {
           : "") +
         csh.ConsolStopNotes
       ).slice(0, 200),
-      cutoffDate: shipmentHeader[0].ScheduledBy == "T" ? shipmentHeader[0].ScheduledDateTimeRange : 0,
+      cutoffDate: shipmentHeader[0].ScheduledBy == "T" ? shipmentHeader[0].ScheduledDateTimeRange : null,
     };
     return stopPayload;
   });
