@@ -288,7 +288,7 @@ const loadP2PNonConsol = async (dynamoData, shipmentAparData) => {
     if (dtype.ScheduledBy == "T"){
       dStopTypeData.cutoffDate = await getGMTDiff(
         shipmentHeader[0].ScheduledDateTimeRange,
-        ptypeAddressData
+        dtypeAddressData
       );
     }
     else{
