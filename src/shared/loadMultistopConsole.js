@@ -281,7 +281,7 @@ const loadMultistopConsole = async (dynamoData, shipmentAparData) => {
         ...element,
         address: addressData,
         scheduledDate: await getGMTDiff(element.scheduledDate, addressData),
-        cutoffDate: cutoffDateDiff !== "" ? cutoffDateDiff : 0,
+        cutoffDate: cutoffDateDiff !== "" ? cutoffDateDiff : null,
       },
     ];
   }
