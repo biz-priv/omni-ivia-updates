@@ -174,9 +174,9 @@ const loadP2PConsole = async (dynamoData, shipmentAparData) => {
     confirmationCost?.PickupDateTime ?? "",
     ptypeAddressData
   );
-  const cutoffDate = shipmentHeader[0].ReadyDateTimeRange.slice(0,11) + shipmentHeader[0].CloseTime.slice(11)
+  // const cutoffDate = shipmentHeader[0].ReadyDateTimeRange.slice(0,11) + shipmentHeader[0].CloseTime.slice(11)
   pStopTypeData.cutoffDate = await getGMTDiff(
-    cutoffDate,
+    shipmentHeader[0].ReadyDateTimeRange,
     ptypeAddressData
   ); 
   /**

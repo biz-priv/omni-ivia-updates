@@ -226,9 +226,9 @@ const loadP2PNonConsol = async (dynamoData, shipmentAparData) => {
     ptypeAddressData
   );
 
-  const cutoffDate = shipmentHeader[0].ReadyDateTimeRange.slice(0,11) + shipmentHeader[0].CloseTime.slice(11)
+  // const cutoffDate = shipmentHeader[0].ReadyDateTimeRange.slice(0,11) + shipmentHeader[0].CloseTime.slice(11)
     pStopTypeData.cutoffDate = await getGMTDiff(
-      cutoffDate,
+      shipmentHeader[0].ReadyDateTimeRange,
       ptypeAddressData
     );
 
