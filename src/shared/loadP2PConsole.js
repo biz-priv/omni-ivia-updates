@@ -246,6 +246,7 @@ const loadP2PConsole = async (dynamoData, shipmentAparData) => {
   //   dStopTypeData.cutoffDate = null;
   // }
 
+  
   const deliverycutoffTime = get(consolStopHeaders, "ConsolStopTimeEnd", "")
   const deliveryCutoffDate = get(consolStopHeaders, "ConsolStopDate", "")
   if (deliverycutoffTime && deliveryCutoffDate && deliverycutoffTime.length > 11) {
