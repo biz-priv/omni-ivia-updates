@@ -15,6 +15,7 @@ const momentTZ = require("moment-timezone");
 const { v4: uuidv4 } = require("uuid");
 const { queryWithPartitionKey, queryWithIndex, putItem } = require("./dynamo");
 const { sendSNSMessage } = require("./errorNotificationHelper");
+const { get } = require("lodash");
 const ddb = new AWS.DynamoDB.DocumentClient({
   region: process.env.REGION,
 });
@@ -92,8 +93,8 @@ const loadMultistopConsole = async (dynamoData, shipmentAparData) => {
           (esh) => esh.PK_OrderNo === e.FK_OrderNo
         );
         houseBillList =
-          houseBillList.length > 0 ? houseBillList[0].Housebill : "";
-        return { ...es, ...e, Housebill: houseBillList };
+          houseBillList.length > 0 ? houseBillList[0] : "";
+        return { ...es, ...e, ...houseBillList };
       });
     dataArr = [...dataArr, ...csh];
   });
@@ -120,8 +121,11 @@ const loadMultistopConsole = async (dynamoData, shipmentAparData) => {
    * prepare the Pickup type obj from consolStopHeader
    */
   const pTypeShipmentMap = Object.keys(pTypeShipment).map((e) => {
+    console.log("inside the pick up data")
+    console.log(e)
     const ele = pTypeShipment[e];
     const csh = ele[0];
+    console.log(csh)
 
     /**
      * preparing cargo obj form table shipmentDesc based on shipmentApar.FK_OrderNo
@@ -156,6 +160,18 @@ const loadMultistopConsole = async (dynamoData, shipmentAparData) => {
     /**
      * prepare the Pickup type obj from consolStopHeader
      */
+    let pcutoffval;
+    const pcutoffDate = csh.ReadyDateTimeRange
+    if (pcutoffDate && pcutoffDate.length > 11) {
+      if (pcutoffDate.slice(11) == "00:00:00.000") {
+        pcutoffval = ""
+      } else {
+        pcutoffval = csh.ReadyDateTimeRange
+      }
+    } else {
+      pcutoffval = ""
+    }
+
     const stopPayload = {
       stopType: "P",
       stopNum: e,
@@ -186,7 +202,7 @@ const loadMultistopConsole = async (dynamoData, shipmentAparData) => {
           : "") +
         csh.ConsolStopNotes
       ).slice(0, 200),
-      cutoffDate: shipmentHeader[0]?.ReadyDateTimeRange?? "",
+      cutoffDate: pcutoffval,
     };
     return stopPayload;
   });
@@ -195,8 +211,11 @@ const loadMultistopConsole = async (dynamoData, shipmentAparData) => {
    * prepare the Delivery type obj from consolStopHeader
    */
   const dTypeShipmentMap = Object.keys(dTypeShipment).map((e) => {
+    console.log("inside the delivery shipment data")
+    console.log(e)
     const ele = dTypeShipment[e];
     const csh = ele[0];
+    console.log(csh)
 
     const FK_OrderNoListIns = [...new Set(ele.map((e) => e.FK_OrderNo))];
     //fetch notes from Instructions table based on shipment_apar table FK_OrderNo data
@@ -222,6 +241,23 @@ const loadMultistopConsole = async (dynamoData, shipmentAparData) => {
         " and " +
         moment(csh.ConsolStopTimeEnd).format("HH:mm")
         : "at " + moment(csh.ConsolStopTimeBegin).format("HH:mm");
+
+
+    /**
+     * prepare Delivery type cutoffDate value
+     */
+    let dcutoffVal;
+    const deliverycutoffTime = get(csh, "ConsolStopTimeEnd", "")
+    const deliveryCutoffDate = get(csh, "ConsolStopDate", "")
+    if (deliverycutoffTime && deliveryCutoffDate && deliverycutoffTime.length > 11) {
+      if (deliverycutoffTime.slice(11) != "00:00:00.000") {
+        dcutoffVal = deliveryCutoffDate.slice(0,11) + deliverycutoffTime.slice(11)
+      } else {
+        dcutoffVal = null
+      }
+    } else {
+      dcutoffVal = null
+    }
 
     /**
      * prepare the Delivery type obj from consolStopHeader
@@ -255,7 +291,7 @@ const loadMultistopConsole = async (dynamoData, shipmentAparData) => {
           : "") +
         csh.ConsolStopNotes
       ).slice(0, 200),
-      cutoffDate: shipmentHeader[0].ScheduledBy == "T" ? shipmentHeader[0].ScheduledDateTimeRange : null,
+      cutoffDate: dcutoffVal,
     };
     return stopPayload;
   });
@@ -298,7 +334,7 @@ const loadMultistopConsole = async (dynamoData, shipmentAparData) => {
     const element = shipmentApar[i].Total;
     totalArray.push(element)
   }
-  
+
   const total = totalArray.reduce((accumulator, currentValue) => {
     return accumulator + parseFloat(currentValue);
   }, 0);
@@ -308,8 +344,8 @@ const loadMultistopConsole = async (dynamoData, shipmentAparData) => {
     carrierId: IVIA_CARRIER_ID, // IVIA_CARRIER_ID = 1000025
     refNums: {
       refNum1: CONSOL_NO ?? "", //shipmentApar.ConsolNo
-      refNum2: customer?.CustName?.slice(0,19) ?? "", //ignore
-      refNum3: shipmentHeader[0].ControllingStation ?? ""
+      refNum2: customer?.CustName?.slice(0, 19) ?? "", //ignore
+      refNum3: get(shipmentHeader[0], "HandlingStation", ""), //HandlingStation
     },
     shipmentDetails: {
       stops: sortObjByStopNo(stopsList, "stopNum"),
@@ -330,7 +366,7 @@ const loadMultistopConsole = async (dynamoData, shipmentAparData) => {
     iviaPayload,
     CONSOL_NO
   );
- 
+
   if (!check) {
     //save to dynamo DB
     let houseBillList = [];

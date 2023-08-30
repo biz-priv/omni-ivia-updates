@@ -15,6 +15,7 @@ const moment = require("moment");
 const { v4: uuidv4 } = require("uuid");
 const { queryWithPartitionKey, queryWithIndex, putItem } = require("./dynamo");
 const { sendSNSMessage } = require("./errorNotificationHelper");
+const { get } = require("lodash");
 const ddb = new AWS.DynamoDB.DocumentClient({
   region: process.env.REGION,
 });
@@ -54,7 +55,7 @@ const loadP2PNonConsol = async (dynamoData, shipmentAparData) => {
    * shipmentDesc
    */
   const dataSet = await fetchDataFromTables(tableList, primaryKeyValue);
- // console.log("dataSet", JSON.stringify(dataSet));
+  // console.log("dataSet", JSON.stringify(dataSet));
 
   const shipmentApar = shipmentAparData;
   const shipmentHeader = dataSet.shipmentHeader;
@@ -163,7 +164,7 @@ const loadP2PNonConsol = async (dynamoData, shipmentAparData) => {
         parseInt(e?.Length != "" ? e?.Length : 0) +
           parseInt(e?.Width != "" ? e?.Width : 0) +
           parseInt(e?.Height != "" ? e?.Height : 0) ===
-        0
+          0
           ? true
           : false;
       return {
@@ -171,8 +172,8 @@ const loadP2PNonConsol = async (dynamoData, shipmentAparData) => {
           e.FK_PieceTypeId === "BOX"
             ? "BOX"
             : e.FK_PieceTypeId === "PLT"
-            ? "PAL"
-            : "PIE",
+              ? "PAL"
+              : "PIE",
         quantity: e?.Pieces ?? 0,
         length: checkIfZero ? 1 : parseInt(e?.Length),
         width: checkIfZero ? 1 : parseInt(e?.Width),
@@ -216,7 +217,7 @@ const loadP2PNonConsol = async (dynamoData, shipmentAparData) => {
         : "") +
       ptype.PickupNote
     ).slice(0, 200),
-    cutoffDate:"",
+    cutoffDate: "",
   };
 
   const ptypeAddressData = await checkAddressByGoogleApi(pStopTypeData.address);
@@ -226,11 +227,15 @@ const loadP2PNonConsol = async (dynamoData, shipmentAparData) => {
     ptypeAddressData
   );
 
-  // const cutoffDate = shipmentHeader[0].ReadyDateTimeRange.slice(0,11) + shipmentHeader[0].CloseTime.slice(11)
+  const pcutoffDate = ptype.PickupTimeRange
+  if (pcutoffDate.slice(11) == "00:00:00.000") {
+    pStopTypeData.cutoffDate = null
+  } else {
     pStopTypeData.cutoffDate = await getGMTDiff(
-      shipmentHeader[0].ReadyDateTimeRange,
+      pcutoffDate,
       ptypeAddressData
     );
+  }
 
   /**
    * preparing delivery type stop obj from table ConfirmationCost based on shipmentAPAR.FK_OrderNo
@@ -275,7 +280,7 @@ const loadP2PNonConsol = async (dynamoData, shipmentAparData) => {
         : "") +
       dtype.DeliveryNote
     ).slice(0, 200),
-    cutoffDate:"",
+    cutoffDate: "",
   };
 
   const dtypeAddressData = await checkAddressByGoogleApi(dStopTypeData.address);
@@ -284,16 +289,27 @@ const loadP2PNonConsol = async (dynamoData, shipmentAparData) => {
     dtype.DeliveryDateTime,
     dtypeAddressData
   );
+  // if (dtype.ScheduledBy == "T") {
+  //   dStopTypeData.cutoffDate = await getGMTDiff(
+  //     shipmentHeader[0].ScheduledDateTimeRange,
+  //     dtypeAddressData
+  //   );
+  // }
+  // else {
+  //   dStopTypeData.cutoffDate = null
+  // }
+  const dcutoffDate = dtype.DeliveryTimeRange
+  if (dcutoffDate.slice(11) == "00:00:00.000") {
+    pStopTypeData.cutoffDate = null
+  } else {
+    pStopTypeData.cutoffDate = await getGMTDiff(
+      dcutoffDate,
+      ptypeAddressData
+    );
+  }
 
-    if (dtype.ScheduledBy == "T"){
-      dStopTypeData.cutoffDate = await getGMTDiff(
-        shipmentHeader[0].ScheduledDateTimeRange,
-        dtypeAddressData
-      );
-    }
-    else{
-      dStopTypeData.cutoffDate = null
-    }
+
+
   /**
    * filtered shipmentDesc data based on shipmentApar.FK_OrderNo to get hazardous and unNum
    */
@@ -308,8 +324,8 @@ const loadP2PNonConsol = async (dynamoData, shipmentAparData) => {
     carrierId: IVIA_CARRIER_ID, // IVIA_CARRIER_ID = dev 1000025 stage = 102
     refNums: {
       refNum1: housebill_delimited[0] ?? "", // tbl_shipmentHeader.pk_orderNo as hwb/ tbl_confirmationCost.consolNo(if it is a consol)
-      refNum2: customer?.CustName?.slice(0,19) ?? "", //customee name
-      refNum3: shipmentHeader[0].ControllingStation ?? "", //ControllingStation
+      refNum2: customer?.CustName?.slice(0, 19) ?? "", //customee name
+      refNum3: get(shipmentHeader[0], "HandlingStation", ""), //HandlingStation
     },
     shipmentDetails: {
       stops: [pStopTypeData, dStopTypeData],
@@ -323,7 +339,7 @@ const loadP2PNonConsol = async (dynamoData, shipmentAparData) => {
         moment(shipmentHeader?.[0]?.ReadyDateTime).format("HH:mm") +
         " close " +
         moment(shipmentHeader?.[0]?.CloseTime).format("HH:mm"),
-        revenue: +parseFloat(total).toFixed(2)?? "",
+      revenue: +parseFloat(total).toFixed(2) ?? "",
     },
   };
   console.info("iviaPayload", JSON.stringify(iviaPayload));
@@ -638,7 +654,7 @@ async function fetchDataFromTables(tableList, primaryKeyValue) {
         TableName: CUSTOMER_TABLE,
         KeyConditionExpression: "PK_CustNo = :PK_CustNo",
         ExpressionAttributeValues: {
-          ":PK_CustNo":newObj.shipmentHeader[0].BillNo,
+          ":PK_CustNo": newObj.shipmentHeader[0].BillNo,
         },
       };
 
