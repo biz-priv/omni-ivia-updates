@@ -301,9 +301,9 @@ const loadP2PNonConsol = async (dynamoData, shipmentAparData) => {
   // }
   const dcutoffDate = dtype.DeliveryTimeRange
   if (dcutoffDate.slice(11) == "00:00:00.000") {
-    pStopTypeData.cutoffDate = null
+    dStopTypeData.cutoffDate = null
   } else {
-    pStopTypeData.cutoffDate = await getGMTDiff(
+    dStopTypeData.cutoffDate = await getGMTDiff(
       dcutoffDate,
       ptypeAddressData
     );
