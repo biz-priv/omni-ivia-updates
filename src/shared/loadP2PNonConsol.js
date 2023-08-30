@@ -65,6 +65,7 @@ const loadP2PNonConsol = async (dynamoData, shipmentAparData) => {
   const equipment = dataSet.equipment.length > 0 ? dataSet.equipment[0] : {};
   const customer = dataSet.customer.length > 0 ? dataSet.customer[0] : {};
 
+  console.log("instructions table", shipmentInstructions)
   /**
    * we need to check in the shipmentHeader.OrderDate >= '2023:04:01 00:00:00' - for both nonconsol and consol -> if this condition satisfies, we send the event to Ivia, else we ignore
    * Ignore the event if there is no OrderDate or it is "1900
@@ -319,6 +320,14 @@ const loadP2PNonConsol = async (dynamoData, shipmentAparData) => {
   );
   const total = dataSet.shipmentApar[0].Total
 
+
+
+  const instructionNoteArray = shipmentInstructions.filter(
+    (esh) => esh.Type === "S"
+  );
+  const instructionNote = "\r\n" + get(instructionNoteArray[0], "Note", "")
+
+
   //IVIA payload
   const iviaPayload = {
     carrierId: IVIA_CARRIER_ID, // IVIA_CARRIER_ID = dev 1000025 stage = 102
@@ -335,10 +344,7 @@ const loadP2PNonConsol = async (dynamoData, shipmentAparData) => {
       unNum: getUnNum(filteredSD), // accepts only 4 degit number as string
       notes:
         (equipment?.Description + "\r\n" ?? "") +
-        "Ready " +
-        moment(shipmentHeader?.[0]?.ReadyDateTime).format("HH:mm") +
-        " close " +
-        moment(shipmentHeader?.[0]?.CloseTime).format("HH:mm"),
+        (instructionNote),
       revenue: +parseFloat(total).toFixed(2) ?? "",
     },
   };
