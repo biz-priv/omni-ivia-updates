@@ -229,13 +229,17 @@ const loadP2PNonConsol = async (dynamoData, shipmentAparData) => {
   );
 
   const pcutoffDate = ptype.PickupTimeRange
-  if (pcutoffDate.slice(11) == "00:00:00.000") {
-    pStopTypeData.cutoffDate = null
+  if (pcutoffDate) {
+    if (pcutoffDate.slice(11) == "00:00:00.000") {
+      pStopTypeData.cutoffDate = null
+    } else {
+      pStopTypeData.cutoffDate = await getGMTDiff(
+        pcutoffDate,
+        ptypeAddressData
+      );
+    }
   } else {
-    pStopTypeData.cutoffDate = await getGMTDiff(
-      pcutoffDate,
-      ptypeAddressData
-    );
+    pStopTypeData.cutoffDate = null
   }
 
   /**
@@ -300,13 +304,17 @@ const loadP2PNonConsol = async (dynamoData, shipmentAparData) => {
   //   dStopTypeData.cutoffDate = null
   // }
   const dcutoffDate = dtype.DeliveryTimeRange
-  if (dcutoffDate.slice(11) == "00:00:00.000") {
-    dStopTypeData.cutoffDate = null
+  if (dcutoffDate) {
+    if (dcutoffDate.slice(11) == "00:00:00.000") {
+      dStopTypeData.cutoffDate = null
+    } else {
+      dStopTypeData.cutoffDate = await getGMTDiff(
+        dtype.DeliveryTimeRange,
+        dtypeAddressData
+      );
+    }
   } else {
-    dStopTypeData.cutoffDate = await getGMTDiff(
-      dcutoffDate,
-      ptypeAddressData
-    );
+    dStopTypeData.cutoffDate = null
   }
 
 

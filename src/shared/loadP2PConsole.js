@@ -62,6 +62,7 @@ const loadP2PConsole = async (dynamoData, shipmentAparData) => {
   const equipment = dataSet.equipment.length > 0 ? dataSet.equipment[0] : {};
   const customer = dataSet.customer.length > 0 ? dataSet.customer[0] : {};
   const consolStopHeaders = dataSet.consolStopHeaders.length > 0 ? dataSet.consolStopHeaders[0] : {};
+  console.log("console stop header", consolStopHeaders)
 
   /**
    * we need to check in the shipmentHeader.OrderDate >= '2023:04:01 00:00:00' - for both nonconsol and consol -> if this condition satisfies, we send the event to Ivia, else we ignore
@@ -189,7 +190,7 @@ const loadP2PConsole = async (dynamoData, shipmentAparData) => {
         ptypeAddressData
       );
     }
-  }else{
+  } else {
     pStopTypeData.cutoffDate = null
   }
   /**
@@ -424,38 +425,35 @@ async function fetchDataFromTablesList(CONSOL_NO) {
       /**
       * consolStopItems
       */
-    
-    const cstparams = {
-      TableName: CONSOL_STOP_ITEMS,
-      KeyConditionExpression: "FK_OrderNo = :FK_OrderNo",
-      ExpressionAttributeValues: {
-        ":FK_OrderNo": element.FK_OrderNo.toString(),
-      },
-    };
-    let cst = await ddb.query(cstparams).promise();
-    consolStopItems = [...consolStopItems, ...cst.Items];
 
-    /**
-     * consolStopHeader
-     */
-    
-    for (let index = 0; index < consolStopItems.length; index++) {
-      const csitem = consolStopItems[index];
-      const cshparams = {
-        TableName: CONSOL_STOP_HEADERS,
-        KeyConditionExpression: "PK_ConsolStopId = :PK_ConsolStopId",
-        FilterExpression: "FK_ConsolNo = :ConsolNo",
+      const cstparams = {
+        TableName: CONSOL_STOP_ITEMS,
+        KeyConditionExpression: "FK_OrderNo = :FK_OrderNo",
         ExpressionAttributeValues: {
-          ":PK_ConsolStopId": csitem.FK_ConsolStopId.toString(),
-          ":ConsolNo": CONSOL_NO.toString(),
+          ":FK_OrderNo": element.FK_OrderNo.toString(),
         },
       };
-      let csh = await ddb.query(cshparams).promise();
-      consolStopHeaders = [...consolStopHeaders, ...csh.Items];
-    }
+      let cst = await ddb.query(cstparams).promise();
+      consolStopItems = [...consolStopItems, ...cst.Items];
 
+      /**
+       * consolStopHeader
+       */
 
-
+      for (let index = 0; index < consolStopItems.length; index++) {
+        const csitem = consolStopItems[index];
+        const cshparams = {
+          TableName: CONSOL_STOP_HEADERS,
+          KeyConditionExpression: "PK_ConsolStopId = :PK_ConsolStopId",
+          FilterExpression: "FK_ConsolNo = :ConsolNo",
+          ExpressionAttributeValues: {
+            ":PK_ConsolStopId": csitem.FK_ConsolStopId.toString(),
+            ":ConsolNo": CONSOL_NO.toString(),
+          },
+        };
+        let csh = await ddb.query(cshparams).promise();
+        consolStopHeaders = [...consolStopHeaders, ...csh.Items];
+      }
     }
 
     /**
@@ -535,7 +533,7 @@ async function fetchDataFromTablesList(CONSOL_NO) {
       customer = customer.Items;
     }
 
-    
+
 
 
     return {

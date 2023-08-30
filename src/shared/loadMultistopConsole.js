@@ -164,12 +164,12 @@ const loadMultistopConsole = async (dynamoData, shipmentAparData) => {
     const pcutoffDate = csh.ReadyDateTimeRange
     if (pcutoffDate && pcutoffDate.length > 11) {
       if (pcutoffDate.slice(11) == "00:00:00.000") {
-        pcutoffval = ""
+        pcutoffval = null
       } else {
         pcutoffval = csh.ReadyDateTimeRange
       }
     } else {
-      pcutoffval = ""
+      pcutoffval = null
     }
 
     const stopPayload = {
@@ -249,7 +249,7 @@ const loadMultistopConsole = async (dynamoData, shipmentAparData) => {
     let dcutoffVal;
     const deliverycutoffTime = get(csh, "ConsolStopTimeEnd", "")
     const deliveryCutoffDate = get(csh, "ConsolStopDate", "")
-    if (deliverycutoffTime && deliveryCutoffDate && deliverycutoffTime.length > 11) {
+    if (deliverycutoffTime && deliveryCutoffDate && deliverycutoffTime.length > 11 && deliveryCutoffDate.length > 0) {
       if (deliverycutoffTime.slice(11) != "00:00:00.000") {
         dcutoffVal = deliveryCutoffDate.slice(0,11) + deliverycutoffTime.slice(11)
       } else {
