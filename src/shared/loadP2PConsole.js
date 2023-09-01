@@ -191,7 +191,7 @@ const loadP2PConsole = async (dynamoData, shipmentAparData) => {
   // } else {
   //   pcutoffVal = null
   // }
-  const pickUpcutoffTime = get(consolStopHeaders, "ConsolStopTimeBegin", "")
+  const pickUpcutoffTime = get(consolStopHeaders, "ConsolStopTimeEnd", "")
   const pickUpCutoffDate = get(consolStopHeaders, "ConsolStopDate", "")
   if (pickUpcutoffTime && pickUpCutoffDate && pickUpcutoffTime.length > 11) {
     if (pickUpcutoffTime.slice(11) != "00:00:00.000") {

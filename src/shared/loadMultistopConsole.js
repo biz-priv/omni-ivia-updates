@@ -161,7 +161,7 @@ const loadMultistopConsole = async (dynamoData, shipmentAparData) => {
      * prepare the Pickup type obj from consolStopHeader
      */
     let pcutoffVal;
-    const pickUpcutoffTime = get(csh, "ConsolStopTimeBegin", "")
+    const pickUpcutoffTime = get(csh, "ConsolStopTimeEnd", "")
     const pickUpCutoffDate = get(csh, "ConsolStopDate", "")
     if (pickUpcutoffTime && pickUpCutoffDate && pickUpcutoffTime.length > 11 && pickUpCutoffDate.length > 0) {
       if (pickUpcutoffTime.slice(11) != "00:00:00.000") {
