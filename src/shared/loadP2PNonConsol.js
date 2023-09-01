@@ -228,13 +228,12 @@ const loadP2PNonConsol = async (dynamoData, shipmentAparData) => {
     ptypeAddressData
   );
 
-  const pcutoffDate = ptype.PickupTimeRange
-  if (pcutoffDate) {
-    if (pcutoffDate.slice(11) == "00:00:00.000") {
+  if (ptype.PickupTimeRange) {
+    if (ptype.PickupTimeRange.slice(11) == "00:00:00.000") {
       pStopTypeData.cutoffDate = null
     } else {
       pStopTypeData.cutoffDate = await getGMTDiff(
-        pcutoffDate,
+        ptype.PickupTimeRange,
         ptypeAddressData
       );
     }
@@ -303,9 +302,9 @@ const loadP2PNonConsol = async (dynamoData, shipmentAparData) => {
   // else {
   //   dStopTypeData.cutoffDate = null
   // }
-  const dcutoffDate = dtype.DeliveryTimeRange
-  if (dcutoffDate) {
-    if (dcutoffDate.slice(11) == "00:00:00.000") {
+
+  if (dtype.DeliveryTimeRange) {
+    if (dtype.DeliveryTimeRange.slice(11) == "00:00:00.000") {
       dStopTypeData.cutoffDate = null
     } else {
       dStopTypeData.cutoffDate = await getGMTDiff(

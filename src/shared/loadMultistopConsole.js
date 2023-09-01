@@ -94,7 +94,7 @@ const loadMultistopConsole = async (dynamoData, shipmentAparData) => {
         );
         houseBillList =
           houseBillList.length > 0 ? houseBillList[0] : "";
-        return { ...es, ...e, ...houseBillList };
+        return { ...es, ...e, Housebill: houseBillList.Housebill };
       });
     dataArr = [...dataArr, ...csh];
   });
@@ -160,16 +160,17 @@ const loadMultistopConsole = async (dynamoData, shipmentAparData) => {
     /**
      * prepare the Pickup type obj from consolStopHeader
      */
-    let pcutoffval;
-    const pcutoffDate = csh.ReadyDateTimeRange
-    if (pcutoffDate && pcutoffDate.length > 11) {
-      if (pcutoffDate.slice(11) == "00:00:00.000") {
-        pcutoffval = null
+    let pcutoffVal;
+    const pickUpcutoffTime = get(csh, "ConsolStopTimeBegin", "")
+    const pickUpCutoffDate = get(csh, "ConsolStopDate", "")
+    if (pickUpcutoffTime && pickUpCutoffDate && pickUpcutoffTime.length > 11 && pickUpCutoffDate.length > 0) {
+      if (pickUpcutoffTime.slice(11) != "00:00:00.000") {
+        pcutoffVal = pickUpCutoffDate.slice(0,11) + pickUpcutoffTime.slice(11)
       } else {
-        pcutoffval = csh.ReadyDateTimeRange
+        pcutoffVal = null
       }
     } else {
-      pcutoffval = null
+      pcutoffVal = null
     }
 
     const stopPayload = {
@@ -202,7 +203,7 @@ const loadMultistopConsole = async (dynamoData, shipmentAparData) => {
           : "") +
         csh.ConsolStopNotes
       ).slice(0, 200),
-      cutoffDate: pcutoffval,
+      cutoffDate: pcutoffVal,
     };
     return stopPayload;
   });

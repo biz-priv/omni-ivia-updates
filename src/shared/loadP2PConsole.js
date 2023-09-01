@@ -180,18 +180,17 @@ const loadP2PConsole = async (dynamoData, shipmentAparData) => {
     ptypeAddressData
   );
 
-  const pcutoffDate = shipmentHeader[0]?.readyDateTimeRange ?? ""
-  if (pcutoffDate) {
-    if (pcutoffDate.slice(11) == "00:00:00.000") {
-      pStopTypeData.cutoffDate = null
+  let pcutoffVal;
+  const pickUpcutoffTime = get(csh, "ConsolStopTimeBegin", "")
+  const pickUpCutoffDate = get(csh, "ConsolStopDate", "")
+  if (pickUpcutoffTime && pickUpCutoffDate && pickUpcutoffTime.length > 11 && pickUpCutoffDate.length > 0) {
+    if (pickUpcutoffTime.slice(11) != "00:00:00.000") {
+      pcutoffVal = pickUpCutoffDate.slice(0, 11) + pickUpcutoffTime.slice(11)
     } else {
-      pStopTypeData.cutoffDate = await getGMTDiff(
-        pcutoffDate,
-        ptypeAddressData
-      );
+      pcutoffVal = null
     }
   } else {
-    pStopTypeData.cutoffDate = null
+    pcutoffVal = null
   }
   /**
    * preparing delivery type stope obj from table ConfirmationCost
@@ -246,7 +245,7 @@ const loadP2PConsole = async (dynamoData, shipmentAparData) => {
   //   dStopTypeData.cutoffDate = null;
   // }
 
-  
+
   const deliverycutoffTime = get(consolStopHeaders, "ConsolStopTimeEnd", "")
   const deliveryCutoffDate = get(consolStopHeaders, "ConsolStopDate", "")
   if (deliverycutoffTime && deliveryCutoffDate && deliverycutoffTime.length > 11) {
