@@ -180,17 +180,30 @@ const loadP2PConsole = async (dynamoData, shipmentAparData) => {
     ptypeAddressData
   );
 
-  let pcutoffVal;
-  const pickUpcutoffTime = get(csh, "ConsolStopTimeBegin", "")
-  const pickUpCutoffDate = get(csh, "ConsolStopDate", "")
-  if (pickUpcutoffTime && pickUpCutoffDate && pickUpcutoffTime.length > 11 && pickUpCutoffDate.length > 0) {
+  // const pickUpcutoffTime = get(csh, "ConsolStopTimeBegin", "")
+  // const pickUpCutoffDate = get(csh, "ConsolStopDate", "")
+  // if (pickUpcutoffTime && pickUpCutoffDate && pickUpcutoffTime.length > 11 && pickUpCutoffDate.length > 0) {
+  //   if (pickUpcutoffTime.slice(11) != "00:00:00.000") {
+  //     pcutoffVal = pickUpCutoffDate.slice(0, 11) + pickUpcutoffTime.slice(11)
+  //   } else {
+  //     pcutoffVal = null
+  //   }
+  // } else {
+  //   pcutoffVal = null
+  // }
+  const pickUpcutoffTime = get(consolStopHeaders, "ConsolStopTimeBegin", "")
+  const pickUpCutoffDate = get(consolStopHeaders, "ConsolStopDate", "")
+  if (pickUpcutoffTime && pickUpCutoffDate && pickUpcutoffTime.length > 11) {
     if (pickUpcutoffTime.slice(11) != "00:00:00.000") {
-      pcutoffVal = pickUpCutoffDate.slice(0, 11) + pickUpcutoffTime.slice(11)
+      pStopTypeData.cutoffDate = await getGMTDiff(
+        pickUpCutoffDate.slice(0, 11) + pickUpcutoffTime.slice(11),
+        ptypeAddressData
+      );
     } else {
-      pcutoffVal = null
+      pStopTypeData.cutoffDate = null
     }
   } else {
-    pcutoffVal = null
+    pStopTypeData.cutoffDate = null
   }
   /**
    * preparing delivery type stope obj from table ConfirmationCost
