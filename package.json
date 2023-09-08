@@ -25,8 +25,10 @@
     "joi": "^17.6.0",
     "lodash": "^4.17.21",
     "lodash.get": "^4.4.2",
+    "log4js": "^6.9.1",
     "moment": "^2.29.3",
     "moment-timezone": "^0.5.39",
+    "serverless-plugin-log-subscription": "^2.2.0",
     "uuid": "^9.0.0",
     "xmlbuilder2": "^3.0.2"
   },

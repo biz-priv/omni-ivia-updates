@@ -51,6 +51,11 @@ provider:
 custom:
   region: ${opt:region, 'us-east-1'}
   stage: ${opt:stage, 'dev'}
+  logSubscription:
+    enabled: true
+    # below should always be the same. If cloudwatch destination does not exist for your deployment region, create one first.
+    destinationArn: arn:aws:logs:${self:provider.region}:332753493246:destination:bce-logs-cw-destination-${self:provider.region}-${self:provider.stage}
+    filterPattern: '{$.service-name = "*"}'
   tags:
     Application: OmniRealTimeReplication
     CreateBy: BizCloudExperts
@@ -59,6 +64,7 @@ custom:
 plugins:
   - serverless-offline
   - serverless-provisioned-concurrency-autoscaling
+  - serverless-plugin-log-subscription
 
 package:
   individually: true

@@ -1,4 +1,5 @@
 const AWS = require("aws-sdk");
+const log4js = require('log4js');
 const { v4: uuidv4 } = require("uuid");
 const momentTZ = require("moment-timezone");
 const { convert } = require("xmlbuilder2");
@@ -6,6 +7,7 @@ const axios = require("axios");
 const { putItem, updateItem } = require("../shared/dynamo");
 const { validatePayload, getStatus } = require("../shared/dataHelper");
 const { sendSNSMessage } = require("../shared/errorNotificationHelper");
+const moment = require('moment');
 
 const {
   IVIA_DDB,
@@ -22,6 +24,11 @@ const {
 // const IVIA_CREATE_SHIPMENT_TOKEN =
 //   "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJvY2N1cnJlZF9vbiI6MTY3ODkwMTU4MDM5NCwidXNlcl9pZCI6Mzc1NCwib3JnX2lkIjo0MDE3LCJwZXJtaXNzaW9ucyI6W251bGxdLCJzY29wZSI6WyJhcGkiXSwib3Blbl9hcGlfaWQiOiJlYWI0NGM3My1mZTJlLTRmZGUtYWNiZi1jY2YwMWMyMGQzN2YiLCJvcGVuX2FwaV91c2VyX2lkIjozOTIyLCJleHAiOjI2Nzg5MDE1NzksInJlZ2lvbiI6Ik5BIiwianRpIjoiMjY3NDVkNjYtYTY4Ni00NmQwLWEzOGQtYjEwNGZkZDJmZmQzIiwiY2xpZW50X2lkIjoib3Blbi1hcGkifQ.qe1fNGPPrHYhCS6AYU44MiEJ9g78s_pLfbM5tMfai68zLZh64wirM5RkeAUDx1O1oE64pfNTnRIGhbX-zduuZo43aHnfgs4nBie06Pr6vlis7u3W4Vy8IEUwB30iYai9rp42tXkArY03WzRETvyGzQr0igU12v4NyCpEtV7JXIt7q2r5mzqZbjF-9YyAt7Ir4U-xy2-_Cf-lCaswKe2AH1kH_x9e8x_T4vNBKW4uo3T6REqR-me4PanvLkFPXtPQDQr-Sk56aefF9lPmTCum_f0A2Z_PE7dDc0WqNGMImUZcY7-62WD82cWM1eJZ9kpIalw3EqPHbMYphH8VnvOiGw";
 module.exports.handler = async (event, context, callback) => {
+  log4js.configure({
+    appenders: { out: { type: "stdout", layout: { type: "messagePassThrough" } } },
+    categories: { default: { appenders: ["out"], level: "info" } }
+  });
+  const logger = log4js.getLogger("out");
   try {
     console.log("event", JSON.stringify(event));
     const data = event.Records;
@@ -57,6 +64,15 @@ module.exports.handler = async (event, context, callback) => {
         ) {
           const houseBills = streamRecord.Housebill.split(",");
           console.log("houseBills", houseBills);
+          logger.info(JSON.stringify({
+            "@timestamp": moment().format(),
+            "status": "200",
+            "message": houseBills,
+            "service-name": "omni-ivia-updates-dev",
+            "application": "omni-ivia-dev",
+            "region": process.env.REGION,
+            "functionName": context.functionName
+          }));
 
           //sending update to WorldTrack for all housebill for the shipment id
           for (let index = 0; index < houseBills.length; index++) {
@@ -68,6 +84,15 @@ module.exports.handler = async (event, context, callback) => {
               iviaCSRes.shipmentId
             );
             console.log("iviaXmlUpdateRes", JSON.stringify(iviaXmlUpdateRes));
+            logger.info(JSON.stringify({
+              "@timestamp": moment().format(),
+              "status": "200",
+              "message": JSON.stringify(iviaXmlUpdateRes),
+              "service-name": "omni-ivia-updates-dev",
+              "application": "omni-ivia-dev",
+              "region": process.env.REGION,
+              "functionName": context.functionName
+            }));
             iviaXmlUpdateResArr = [
               ...iviaXmlUpdateResArr,
               {
@@ -102,7 +127,15 @@ module.exports.handler = async (event, context, callback) => {
             iviaCSRes.status === getStatus().FAILED ? "IVIA API ERROR" : "",
         };
         console.log("resPayload", resPayload);
-
+        logger.info(JSON.stringify({
+          "@timestamp": moment().format(),
+          "status": "200",
+          "message": resPayload,
+          "service-name": "omni-ivia-updates-dev",
+          "application": "omni-ivia-dev",
+          "region": process.env.REGION,
+          "functionName": context.functionName
+        }));
         //add Ivia and WT responses to dynamo db
         await putItem(IVIA_RESPONSE_DDB, resPayload);
 
