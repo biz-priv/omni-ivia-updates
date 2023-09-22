@@ -15,6 +15,7 @@ const moment = require("moment");
 const { v4: uuidv4 } = require("uuid");
 const { queryWithPartitionKey, queryWithIndex, putItem } = require("./dynamo");
 const { sendSNSMessage } = require("./errorNotificationHelper");
+const { get } = require("lodash");
 const ddb = new AWS.DynamoDB.DocumentClient({
   region: process.env.REGION,
 });
@@ -38,7 +39,7 @@ const {
 // const IVIA_CARRIER_ID = "102"; //NOTE:- for stage IVIA need to change it later
 
 const loadP2PNonConsol = async (dynamoData, shipmentAparData) => {
-  console.log("load-P2P-Non-Consol");
+  console.info("load-P2P-Non-Consol");
 
   //get the primary key and All table list
   const { tableList, primaryKeyValue } = getTablesAndPrimaryKey(
@@ -54,7 +55,7 @@ const loadP2PNonConsol = async (dynamoData, shipmentAparData) => {
    * shipmentDesc
    */
   const dataSet = await fetchDataFromTables(tableList, primaryKeyValue);
- // console.log("dataSet", JSON.stringify(dataSet));
+  // console.info("dataSet", JSON.stringify(dataSet));
 
   const shipmentApar = shipmentAparData;
   const shipmentHeader = dataSet.shipmentHeader;
@@ -64,12 +65,13 @@ const loadP2PNonConsol = async (dynamoData, shipmentAparData) => {
   const equipment = dataSet.equipment.length > 0 ? dataSet.equipment[0] : {};
   const customer = dataSet.customer.length > 0 ? dataSet.customer[0] : {};
 
+  console.info("instructions table", shipmentInstructions)
   /**
    * we need to check in the shipmentHeader.OrderDate >= '2023:04:01 00:00:00' - for both nonconsol and consol -> if this condition satisfies, we send the event to Ivia, else we ignore
    * Ignore the event if there is no OrderDate or it is "1900
    */
   if (!checkIfShipmentHeaderOrderDatePass(shipmentHeader)) {
-    console.log(
+    console.info(
       "event IGNORED shipmentHeader.OrderDate LESS THAN 2023:04:01 00:00:00 "
     );
     return {};
@@ -106,25 +108,6 @@ const loadP2PNonConsol = async (dynamoData, shipmentAparData) => {
    * if confirmationCost don't have any data then pick data from shipper and consignee table
    */
   let ptype, dtype;
-  // if (confirmationCost.length > 0) {
-  //   //filtering confirmationCost based on FK_OrderNo and SeqNo and Consolidation from table shipmentApar
-  //   const data = confirmationCost.filter((e) => {
-  //     return (
-  //       e.FK_OrderNo === shipmentApar.FK_OrderNo &&
-  //       e.FK_SeqNo === shipmentApar.SeqNo &&
-  //       shipmentApar.Consolidation === "N"
-  //     );
-  //   });
-  //   ptype = {
-  //     ...data[0],
-  //     PickupNote: (data[0].PickupNote ?? "") + "\r\n" + pInsNotes,
-  //   };
-  //   dtype = {
-  //     ...data[0],
-  //     DeliveryNote: (data[0].DeliveryNote ?? "") + "\r\n" + dInsNotes,
-  //   };
-  // } else {
-  // console.log("no cost data");
   ptype = {
     ...shipper,
     PickupTimeRange: shipmentHeader?.[0]?.ReadyDateTimeRange ?? "",
@@ -141,15 +124,8 @@ const loadP2PNonConsol = async (dynamoData, shipmentAparData) => {
   };
   // }
 
-  console.log("ptype", ptype);
-  console.log("dtype", dtype);
-
-  // NOTE:- check this one when we implement full error notification
-  // exactly one shipfrom/ to address in tbl_confirmation_cost for file number
-  // if (filteredConfirmationCost.length > 1) {
-  //   console.log("error: multiple line on confirmationCost");
-  //   return {};
-  // }
+  console.info("ptype", ptype);
+  console.info("dtype", dtype);
 
   //get all the housebill from shipmentHeader table
   const housebill_delimited = shipmentHeader.map((e) => e.Housebill);
@@ -163,7 +139,7 @@ const loadP2PNonConsol = async (dynamoData, shipmentAparData) => {
         parseInt(e?.Length != "" ? e?.Length : 0) +
           parseInt(e?.Width != "" ? e?.Width : 0) +
           parseInt(e?.Height != "" ? e?.Height : 0) ===
-        0
+          0
           ? true
           : false;
       return {
@@ -171,8 +147,8 @@ const loadP2PNonConsol = async (dynamoData, shipmentAparData) => {
           e.FK_PieceTypeId === "BOX"
             ? "BOX"
             : e.FK_PieceTypeId === "PLT"
-            ? "PAL"
-            : "PIE",
+              ? "PAL"
+              : "PIE",
         quantity: e?.Pieces ?? 0,
         length: checkIfZero ? 1 : parseInt(e?.Length),
         width: checkIfZero ? 1 : parseInt(e?.Width),
@@ -216,7 +192,7 @@ const loadP2PNonConsol = async (dynamoData, shipmentAparData) => {
         : "") +
       ptype.PickupNote
     ).slice(0, 200),
-    cutoffDate:"",
+    cutoffDate: "",
   };
 
   const ptypeAddressData = await checkAddressByGoogleApi(pStopTypeData.address);
@@ -226,11 +202,18 @@ const loadP2PNonConsol = async (dynamoData, shipmentAparData) => {
     ptypeAddressData
   );
 
-  // const cutoffDate = shipmentHeader[0].ReadyDateTimeRange.slice(0,11) + shipmentHeader[0].CloseTime.slice(11)
-    pStopTypeData.cutoffDate = await getGMTDiff(
-      shipmentHeader[0].ReadyDateTimeRange,
-      ptypeAddressData
-    );
+  if (ptype.PickupTimeRange) {
+    if (ptype.PickupTimeRange.slice(11) == "00:00:00.000") {
+      pStopTypeData.cutoffDate = null
+    } else {
+      pStopTypeData.cutoffDate = await getGMTDiff(
+        ptype.PickupTimeRange,
+        ptypeAddressData
+      );
+    }
+  } else {
+    pStopTypeData.cutoffDate = null
+  }
 
   /**
    * preparing delivery type stop obj from table ConfirmationCost based on shipmentAPAR.FK_OrderNo
@@ -275,7 +258,7 @@ const loadP2PNonConsol = async (dynamoData, shipmentAparData) => {
         : "") +
       dtype.DeliveryNote
     ).slice(0, 200),
-    cutoffDate:"",
+    cutoffDate: "",
   };
 
   const dtypeAddressData = await checkAddressByGoogleApi(dStopTypeData.address);
@@ -284,16 +267,31 @@ const loadP2PNonConsol = async (dynamoData, shipmentAparData) => {
     dtype.DeliveryDateTime,
     dtypeAddressData
   );
+  // if (dtype.ScheduledBy == "T") {
+  //   dStopTypeData.cutoffDate = await getGMTDiff(
+  //     shipmentHeader[0].ScheduledDateTimeRange,
+  //     dtypeAddressData
+  //   );
+  // }
+  // else {
+  //   dStopTypeData.cutoffDate = null
+  // }
 
-    if (dtype.ScheduledBy == "T"){
+  if (dtype.DeliveryTimeRange) {
+    if (dtype.DeliveryTimeRange.slice(11) == "00:00:00.000") {
+      dStopTypeData.cutoffDate = null
+    } else {
       dStopTypeData.cutoffDate = await getGMTDiff(
-        shipmentHeader[0].ScheduledDateTimeRange,
+        dtype.DeliveryTimeRange,
         dtypeAddressData
       );
     }
-    else{
-      dStopTypeData.cutoffDate = null
-    }
+  } else {
+    dStopTypeData.cutoffDate = null
+  }
+
+
+
   /**
    * filtered shipmentDesc data based on shipmentApar.FK_OrderNo to get hazardous and unNum
    */
@@ -303,13 +301,21 @@ const loadP2PNonConsol = async (dynamoData, shipmentAparData) => {
   );
   const total = dataSet.shipmentApar[0].Total
 
+
+
+  const instructionNoteArray = shipmentInstructions.filter(
+    (esh) => esh.Type === "S"
+  );
+  const instructionNote = "\r\n" + get(instructionNoteArray[0], "Note", "")
+
+
   //IVIA payload
   const iviaPayload = {
     carrierId: IVIA_CARRIER_ID, // IVIA_CARRIER_ID = dev 1000025 stage = 102
     refNums: {
       refNum1: housebill_delimited[0] ?? "", // tbl_shipmentHeader.pk_orderNo as hwb/ tbl_confirmationCost.consolNo(if it is a consol)
-      refNum2: customer?.CustName?.slice(0,19) ?? "", //customee name
-      refNum3: shipmentHeader[0].ControllingStation ?? "", //ControllingStation
+      refNum2: customer?.CustName?.slice(0, 19) ?? "", //customee name
+      refNum3: get(shipmentHeader[0], "HandlingStation", ""), //HandlingStation
     },
     shipmentDetails: {
       stops: [pStopTypeData, dStopTypeData],
@@ -319,11 +325,8 @@ const loadP2PNonConsol = async (dynamoData, shipmentAparData) => {
       unNum: getUnNum(filteredSD), // accepts only 4 degit number as string
       notes:
         (equipment?.Description + "\r\n" ?? "") +
-        "Ready " +
-        moment(shipmentHeader?.[0]?.ReadyDateTime).format("HH:mm") +
-        " close " +
-        moment(shipmentHeader?.[0]?.CloseTime).format("HH:mm"),
-        revenue: +parseFloat(total).toFixed(2)?? "",
+        (instructionNote),
+      revenue: +parseFloat(total).toFixed(2) ?? "",
     },
   };
   console.info("iviaPayload", JSON.stringify(iviaPayload));
@@ -366,10 +369,10 @@ const loadP2PNonConsol = async (dynamoData, shipmentAparData) => {
        */
       await sendSNSMessage(iviaTableData);
     }
-    console.log("iviaTableData", iviaTableData);
+    console.info("iviaTableData", iviaTableData);
     await putItem(IVIA_DDB, iviaTableData);
   } else {
-    console.log("Already sent to IVIA or validation error");
+    console.info("Already sent to IVIA or validation error");
   }
 };
 
@@ -386,7 +389,7 @@ function validateAndCheckIfDataSentToIvia(payload, shipmentApar) {
   return new Promise(async (resolve, reject) => {
     //validate and get the errorMsg if any validation error happens
     let errorMsg = validatePayload(payload);
-    console.log("errorMsg", errorMsg);
+    console.info("errorMsg", errorMsg);
 
     try {
       //fetch from ivia table and check if data processed or not
@@ -400,9 +403,9 @@ function validateAndCheckIfDataSentToIvia(payload, shipmentApar) {
           ":FK_OrderNo": shipmentApar.FK_OrderNo.toString(),
         },
       };
-      console.log("params", params);
+      console.info("params", params);
       const data = await ddb.query(params).promise();
-      console.log("data:ivia", data);
+      console.info("data:ivia", data);
 
       if (data.Items.length > 0) {
         //check if payload is processed or or in progress
@@ -445,7 +448,7 @@ function validateAndCheckIfDataSentToIvia(payload, shipmentApar) {
         }
       }
     } catch (error) {
-      console.log("dynamoError:", error);
+      console.error("dynamoError:", error);
       resolve({ check: false, errorMsg: "", isError: false });
     }
   });
@@ -535,7 +538,6 @@ async function fetchDataFromTables(tableList, primaryKeyValue) {
         let data = [];
 
         if (ele.type === "INDEX") {
-          // console.log(tableName, ele);
           data = await queryWithIndex(tableName, ele.indexKeyName, {
             [ele.indexKeyColumnName]: primaryKeyValue,
           });
@@ -583,7 +585,7 @@ async function fetchDataFromTables(tableList, primaryKeyValue) {
     const FK_OrderNoList = [
       ...new Set(newObj.shipmentDesc.map((e) => e.FK_OrderNo)),
     ];
-    console.log("FK_OrderNoList for cargo", FK_OrderNoList);
+    console.info("FK_OrderNoList for cargo", FK_OrderNoList);
 
     let shipmentAparCargo = [];
     for (let index = 0; index < FK_OrderNoList.length; index++) {
@@ -599,9 +601,9 @@ async function fetchDataFromTables(tableList, primaryKeyValue) {
       let sac = await ddb.query(sapcParams).promise();
       shipmentAparCargo = [...shipmentAparCargo, ...sac.Items];
     }
-    // console.log("shipmentAparCargo", shipmentAparCargo);
+    // console.info("shipmentAparCargo", shipmentAparCargo);
     newObj.shipmentAparCargo = shipmentAparCargo;
-    console.log("newObj.shipmentHeader", newObj.shipmentHeader);
+    console.info("newObj.shipmentHeader", newObj.shipmentHeader);
 
     /**
      * EQUIPMENT_TABLE
@@ -621,7 +623,7 @@ async function fetchDataFromTables(tableList, primaryKeyValue) {
       };
 
       equipment = await ddb.query(equipmentParam).promise();
-      console.log("equipment", equipment);
+      console.info("equipment", equipment);
       equipment = equipment.Items;
     }
     newObj.equipment = equipment;
@@ -638,7 +640,7 @@ async function fetchDataFromTables(tableList, primaryKeyValue) {
         TableName: CUSTOMER_TABLE,
         KeyConditionExpression: "PK_CustNo = :PK_CustNo",
         ExpressionAttributeValues: {
-          ":PK_CustNo":newObj.shipmentHeader[0].BillNo,
+          ":PK_CustNo": newObj.shipmentHeader[0].BillNo,
         },
       };
 
@@ -649,71 +651,8 @@ async function fetchDataFromTables(tableList, primaryKeyValue) {
 
     return newObj;
   } catch (error) {
-    console.log("error:fetchDataFromTables", error);
+    console.error("error:fetchDataFromTables", error);
   }
 }
 
 module.exports = { loadP2PNonConsol };
-
-// every field is required only refNum2, specialInstructions may be empty
-// {
-//   "carrierId": 1000025, // hardcode  dev:- 1000025 stage:- 102
-//   "refNums": {
-//     "refNum1": "1234", //shipmentHeader.Housebill
-//     "refNum2":  "", //customee name
- //     "refNum3":  "", //ControllingStation
-//   },
-//   "shipmentDetails": {
-//     "stops": [
-//       {
-//         "stopType": "P", // hardcode P for pickup type stops
-//         "stopNum": 0,  // hardcode
-//         "housebills": ["6958454"], //  all shipmentHeader.Housebill nos where shipmentHeader.ConsolNo === "0"
-//         "address": {
-//           "address1": "1759 S linneman RD", // confirmationCost.ShipAddress1
-//           "city": "Mt Prospect", // confirmationCost.ShipCity
-//           "country": "US", //  confirmationCost.FK_ShipCountry
-//           "state": "IL", // confirmationCost.FK_ShipState
-//           "zip": "60056" //  confirmationCost.ShipZip
-//         },
-//         "companyName": "Omni Logistics", // confirmationCost.ShipName
-//         "cargo": [ // all data from shipmentDesc based on shipmentAPAR.FK_OrderNo list
-//           {
-//             "packageType": "", // shipmentDesc.FK_PieceTypeId :- "BOX" = "BOX" , "PLT" = "PAL" , other any value "PIE"
-//             "quantity": "1", // shipmentDesc.Pieces
-//             "length": 68, // shipmentDesc.Length
-//             "width": 48, // shipmentDesc.Width
-//             "height": 46, // shipmentDesc.Height
-//             "weight": 353, // shipmentDesc.Weight
-//             "stackable": "Y", // hardcode
-//             "turnable": "Y" // hardcode
-//           }
-//         ],
-//         "scheduledDate": 1637913600000, // check from code
-//         "specialInstructions": "" // check from code
-//          "cutoffDate": 1687437000000
-//       },
-//       {
-//         "stopType": "D", // hardcode D = delivery
-//         "stopNum": 1, // hardcode
-//         "housebills": ["6958454"], // same as P type
-//         "address": {
-//           "address1": "1414 Calconhook RD", // confirmationCost.ConAddress1
-//           "city": "Sharon Hill", // confirmationCost.ConCity
-//           "country": "US", // confirmationCost.FK_ConCountry
-//           "state": "PA", // confirmationCost.FK_ConState
-//           "zip": "19079" // confirmationCost.ConZip
-//         },
-//         "companyName": "Freight Force PHL", // confirmationCost.ConName
-//         "scheduledDate": 1638176400000, // check from code
-//         "specialInstructions": "" // check from code
-//          "cutoffDate": 1687437000000
-//       }
-//     ],
-//     "dockHigh": "N", //  [Y / N] default "N"
-//     "hazardous": "N", //   shipmentDesc.Hazmat
-//     "liftGate": "N", //  shipmentApar.ChargeCode
-//     "unNum": "" //shipmentDesc.Description accepts only 4 degit number as string or empty string
-//      "revenue":"408.00" //
-//}
-// }

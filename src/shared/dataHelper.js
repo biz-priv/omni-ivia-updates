@@ -303,11 +303,11 @@ async function getGMTDiff(dateTime, address) {
       );
       return unixDateTime;
     } else {
-      return "";
+      return null;
     }
   } catch (error) {
     console.log("error", error);
-    return "";
+    return null;
   }
 }
 
