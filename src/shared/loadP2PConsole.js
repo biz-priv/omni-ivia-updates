@@ -180,17 +180,6 @@ const loadP2PConsole = async (dynamoData, shipmentAparData) => {
     ptypeAddressData
   );
 
-  // const pickUpcutoffTime = get(csh, "ConsolStopTimeBegin", "")
-  // const pickUpCutoffDate = get(csh, "ConsolStopDate", "")
-  // if (pickUpcutoffTime && pickUpCutoffDate && pickUpcutoffTime.length > 11 && pickUpCutoffDate.length > 0) {
-  //   if (pickUpcutoffTime.slice(11) != "00:00:00.000") {
-  //     pcutoffVal = pickUpCutoffDate.slice(0, 11) + pickUpcutoffTime.slice(11)
-  //   } else {
-  //     pcutoffVal = null
-  //   }
-  // } else {
-  //   pcutoffVal = null
-  // }
   const pickupcutoffTimeRange = get(confirmationCost, "PickupTimeRange", "")
   if (pickupcutoffTimeRange) {
     if (pickupcutoffTimeRange.slice(11) != "00:00:00.000") {
@@ -247,16 +236,6 @@ const loadP2PConsole = async (dynamoData, shipmentAparData) => {
     confirmationCost?.DeliveryDateTime ?? "",
     dtypeAddressData
   );
-  // if (shipmentHeader[0].ScheduledBy == "T") {
-  //   dStopTypeData.cutoffDate = await getGMTDiff(
-  //     shipmentHeader[0].ScheduledDateTimeRange,
-  //     dtypeAddressData
-  //   );
-  // }
-  // else {
-  //   dStopTypeData.cutoffDate = null;
-  // }
-
 
   const deliverycutoffTimeRange = get(confirmationCost, "DeliveryTimeRange", "")
   if (deliverycutoffTimeRange) {

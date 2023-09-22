@@ -93,8 +93,8 @@ const loadMultistopConsole = async (dynamoData, shipmentAparData) => {
           (esh) => esh.PK_OrderNo === e.FK_OrderNo
         );
         houseBillList =
-          houseBillList.length > 0 ? houseBillList[0] : "";
-        return { ...es, ...e, Housebill: houseBillList.Housebill };
+          houseBillList.length > 0 ? houseBillList[0].Housebill : "";
+        return { ...es, ...e, Housebill: houseBillList };
       });
     dataArr = [...dataArr, ...csh];
   });
@@ -165,7 +165,7 @@ const loadMultistopConsole = async (dynamoData, shipmentAparData) => {
     const pickUpCutoffDate = get(csh, "ConsolStopDate", "")
     if (pickUpcutoffTime && pickUpCutoffDate && pickUpcutoffTime.length > 11 && pickUpCutoffDate.length > 0) {
       if (pickUpcutoffTime.slice(11) != "00:00:00.000") {
-        pcutoffVal = pickUpCutoffDate.slice(0,11) + pickUpcutoffTime.slice(11)
+        pcutoffVal = pickUpCutoffDate.slice(0, 11) + pickUpcutoffTime.slice(11)
       } else {
         pcutoffVal = null
       }
@@ -252,7 +252,7 @@ const loadMultistopConsole = async (dynamoData, shipmentAparData) => {
     const deliveryCutoffDate = get(csh, "ConsolStopDate", "")
     if (deliverycutoffTime && deliveryCutoffDate && deliverycutoffTime.length > 11 && deliveryCutoffDate.length > 0) {
       if (deliverycutoffTime.slice(11) != "00:00:00.000") {
-        dcutoffVal = deliveryCutoffDate.slice(0,11) + deliverycutoffTime.slice(11)
+        dcutoffVal = deliveryCutoffDate.slice(0, 11) + deliverycutoffTime.slice(11)
       } else {
         dcutoffVal = null
       }
