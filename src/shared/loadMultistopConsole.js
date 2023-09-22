@@ -39,7 +39,7 @@ const {
 const globalConsolIndex = "omni-ivia-ConsolNo-index-" + STAGE;
 
 const loadMultistopConsole = async (dynamoData, shipmentAparData) => {
-  console.log("load-Multi-stop-Console");
+  console.info("load-Multi-stop-Console");
 
   const CONSOL_NO = shipmentAparData.ConsolNo;
 
@@ -54,7 +54,7 @@ const loadMultistopConsole = async (dynamoData, shipmentAparData) => {
    * consolStopItems
    */
   const dataSet = await fetchDataFromTablesList(CONSOL_NO);
-  console.log("dataSet", JSON.stringify(dataSet));
+  console.info("dataSet", JSON.stringify(dataSet));
   const shipmentApar = dataSet.shipmentApar;
   const shipmentHeader = dataSet.shipmentHeader;
   const shipmentDesc = dataSet.shipmentDesc;
@@ -69,7 +69,7 @@ const loadMultistopConsole = async (dynamoData, shipmentAparData) => {
    * Ignore the event if there is no OrderDate or it is "1900
    */
   if (!checkIfShipmentHeaderOrderDatePass(shipmentHeader)) {
-    console.log(
+    console.info(
       "event IGNORED shipmentHeader.OrderDate LESS THAN 2023:04:01 00:00:00 "
     );
     return {};
@@ -121,11 +121,9 @@ const loadMultistopConsole = async (dynamoData, shipmentAparData) => {
    * prepare the Pickup type obj from consolStopHeader
    */
   const pTypeShipmentMap = Object.keys(pTypeShipment).map((e) => {
-    console.log("inside the pick up data")
-    console.log(e)
     const ele = pTypeShipment[e];
     const csh = ele[0];
-    console.log(csh)
+    console.info(csh)
 
     /**
      * preparing cargo obj form table shipmentDesc based on shipmentApar.FK_OrderNo
@@ -212,11 +210,9 @@ const loadMultistopConsole = async (dynamoData, shipmentAparData) => {
    * prepare the Delivery type obj from consolStopHeader
    */
   const dTypeShipmentMap = Object.keys(dTypeShipment).map((e) => {
-    console.log("inside the delivery shipment data")
-    console.log(e)
     const ele = dTypeShipment[e];
     const csh = ele[0];
-    console.log(csh)
+    console.info(csh)
 
     const FK_OrderNoListIns = [...new Set(ele.map((e) => e.FK_OrderNo))];
     //fetch notes from Instructions table based on shipment_apar table FK_OrderNo data
@@ -301,7 +297,7 @@ const loadMultistopConsole = async (dynamoData, shipmentAparData) => {
    * merging Pickup and delivery type stopes
    */
   const margedStops = [...pTypeShipmentMap, ...dTypeShipmentMap];
-  console.log("margedStops", JSON.stringify(margedStops));
+  console.info("margedStops", JSON.stringify(margedStops));
 
   /**
    * looping all the records and calculating the scheduledDate unix time
@@ -311,7 +307,7 @@ const loadMultistopConsole = async (dynamoData, shipmentAparData) => {
     const element = margedStops[index];
     const addressData = await checkAddressByGoogleApi(element.address);
     const cutoffDateDiff = await getGMTDiff(element.cutoffDate, addressData);
-    console.log("addressData", addressData);
+    console.info("addressData", addressData);
     stopsList = [
       ...stopsList,
       {
@@ -358,7 +354,7 @@ const loadMultistopConsole = async (dynamoData, shipmentAparData) => {
       revenue: total ?? "",
     },
   };
-  console.log("iviaPayload", JSON.stringify(iviaPayload));
+  console.info("iviaPayload", JSON.stringify(iviaPayload));
 
   /**
    * validate the payload and check if it is already processed
@@ -396,7 +392,7 @@ const loadMultistopConsole = async (dynamoData, shipmentAparData) => {
     if (isError) {
       await sendSNSMessage(iviaTableData);
     }
-    console.log("iviaTableData", iviaTableData);
+    console.info("iviaTableData", iviaTableData);
     await putItem(IVIA_DDB, iviaTableData);
   }
 };
@@ -461,7 +457,7 @@ function getCargoData(shipmentDesc, ele) {
 function validateAndCheckIfDataSentToIvia(payload, ConsolNo) {
   return new Promise(async (resolve, reject) => {
     let errorMsg = validatePayload(payload);
-    console.log("errorMsg", errorMsg);
+    console.info("errorMsg", errorMsg);
 
     try {
       //fetch from ivia table and check if data processed or not
@@ -473,9 +469,7 @@ function validateAndCheckIfDataSentToIvia(payload, ConsolNo) {
           ":ConsolNo": ConsolNo.toString(),
         },
       };
-      console.log("params", params);
       const data = await ddb.query(params).promise();
-      console.log("data:ivia", data);
 
       if (data.Items.length > 0) {
         //check if payload is processed or or in progress
@@ -516,7 +510,7 @@ function validateAndCheckIfDataSentToIvia(payload, ConsolNo) {
         }
       }
     } catch (error) {
-      console.log("dynamoError:", error);
+      console.error("dynamoError:", error);
       resolve({ check: false, errorMsg: "", isError: false });
     }
   });
@@ -635,7 +629,7 @@ async function fetchDataFromTablesList(CONSOL_NO) {
      * Fetch shipment apar for liftgate based on shipmentDesc.FK_OrderNo
      */
     const FK_OrderNoList = [...new Set(shipmentDesc.map((e) => e.FK_OrderNo))];
-    console.log("FK_OrderNoList for cargo", FK_OrderNoList);
+    console.info("FK_OrderNoList for cargo", FK_OrderNoList);
 
     let shipmentAparCargo = [];
     for (let index = 0; index < FK_OrderNoList.length; index++) {
@@ -669,7 +663,7 @@ async function fetchDataFromTablesList(CONSOL_NO) {
     };
     let shAparForEQData = await ddb.query(shAparForEQParam).promise();
     shAparForEQData = shAparForEQData.Items;
-    console.log("shAparForEQData", shAparForEQData);
+    console.info("shAparForEQData", shAparForEQData);
 
     let equipment = [];
     if (shAparForEQData.length > 0 && shAparForEQData[0].FK_EquipmentCode) {
@@ -684,7 +678,7 @@ async function fetchDataFromTablesList(CONSOL_NO) {
 
       const eqData = await ddb.query(equipmentParam).promise();
       equipment = eqData.Items;
-      console.log("equipment", eqData);
+      console.info("equipment", eqData);
     }
 
     /**
@@ -717,69 +711,9 @@ async function fetchDataFromTablesList(CONSOL_NO) {
       customer,
     };
   } catch (error) {
-    console.log("error", error);
+    console.error("error", error);
     return {};
   }
 }
 
 module.exports = { loadMultistopConsole };
-
-// every field is required only refNum2, specialInstructions may be empty
-// {
-//   "carrierId": 1000025, // hardcode  dev:- 1000025 stage:- 102
-//   "refNums": {
-//     "refNum1": "1234", //shipmentApar.ConsolNo
-//     "refNum2": "" //hardcode
-//   },
-//   "shipmentDetails": {
-//     "stops": [
-//       {
-//         "stopType": "P", // hardcode P for pickup
-//         "stopNum": 0,  // hardcode
-//         "housebills": ["6958454"], //  all shipmentHeader.Housebill nos where shipmentHeader.ConsolNo === "0"
-//         "address": {
-//           "address1": "1759 S linneman RD", // conStopHeader.ConsolStopAddress1,
-//           "address2": "1759 S linneman RD", // conStopHeader.ConsolStopAddress2,
-//           "city": "Mt Prospect", // conStopHeader.ConsolStopCity,
-//           "country": "US", //  conStopHeader.FK_ConsolStopCountry,
-//           "state": "IL", // conStopHeader.FK_ConsolStopState,
-//           "zip": "60056" //  conStopHeader.ConsolStopZip,
-//         },
-//         "companyName": "Omni Logistics", // confirmationCost.ShipName
-//         "cargo": [ // all data from shipmentDesc based on shipmentAPAR.FK_OrderNo list
-//           {
-//             "packageType": "", // shipmentDesc.FK_PieceTypeId :- "BOX" = "BOX" , "PLT" = "PAL" , other any value "PIE"
-//             "quantity": "1", // shipmentDesc.Pieces
-//             "length": 68, // shipmentDesc.Length
-//             "width": 48, // shipmentDesc.Width
-//             "height": 46, // shipmentDesc.Height
-//             "weight": 353, // shipmentDesc.Weight
-//             "stackable": "Y", // hardcode
-//             "turnable": "Y" // hardcode
-//           }
-//         ],
-//         "scheduledDate": 1637913600000, // check from code
-//         "specialInstructions": "" // check from code
-//       },
-//       {
-//         "stopType": "D", // hardcode D = delivery
-//         "stopNum": 1, // hardcode
-//         "housebills": ["6958454"], // same as P type
-//         "address": {
-//           "address1": "1414 Calconhook RD", // conStopHeader.ConAddress1
-//           "city": "Sharon Hill", // conStopHeader.ConCity
-//           "country": "US", // conStopHeader.FK_ConCountry
-//           "state": "PA", // conStopHeader.FK_ConState
-//           "zip": "19079" // conStopHeader.ConZip
-//         },
-//         "companyName": "Freight Force PHL", // conStopHeader.ConName
-//         "scheduledDate": 1638176400000, // check from code
-//         "specialInstructions": "" // check from code
-//       }
-//     ],
-//     "dockHigh": "N", //  [Y / N] default "N"
-//     "hazardous": "N", //   shipmentDesc.Hazmat
-//     "liftGate": "N", //  shipmentApar.ChargeCode
-//     "unNum": "" // shipmentDesc.Description  accepts only 4 degit number as string or empty string
-//   }
-// }

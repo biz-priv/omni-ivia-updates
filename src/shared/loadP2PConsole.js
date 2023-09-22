@@ -40,7 +40,7 @@ const {
 const globalConsolIndex = "omni-ivia-ConsolNo-index-" + STAGE;
 
 const loadP2PConsole = async (dynamoData, shipmentAparData) => {
-  console.log("load-P2P-Console");
+  console.info("load-P2P-Console");
   const CONSOL_NO = shipmentAparData.ConsolNo;
 
   /**
@@ -51,7 +51,6 @@ const loadP2PConsole = async (dynamoData, shipmentAparData) => {
    * shipmentHeader
    */
   const dataSet = await fetchDataFromTablesList(CONSOL_NO);
-  // console.log("dataSet", JSON.stringify(dataSet));
 
   const shipmentApar = dataSet.shipmentApar;
   const confirmationCost =
@@ -62,14 +61,13 @@ const loadP2PConsole = async (dynamoData, shipmentAparData) => {
   const equipment = dataSet.equipment.length > 0 ? dataSet.equipment[0] : {};
   const customer = dataSet.customer.length > 0 ? dataSet.customer[0] : {};
   const consolStopHeaders = dataSet.consolStopHeaders.length > 0 ? dataSet.consolStopHeaders[0] : {};
-  console.log("console stop header", consolStopHeaders)
 
   /**
    * we need to check in the shipmentHeader.OrderDate >= '2023:04:01 00:00:00' - for both nonconsol and consol -> if this condition satisfies, we send the event to Ivia, else we ignore
    * Ignore the event if there is no OrderDate or it is "1900
    */
   if (!checkIfShipmentHeaderOrderDatePass(shipmentHeader)) {
-    console.log(
+    console.info(
       "event IGNORED shipmentHeader.OrderDate LESS THAN 2023:04:01 00:00:00 "
     );
     return {};
@@ -271,7 +269,7 @@ const loadP2PConsole = async (dynamoData, shipmentAparData) => {
       revenue: +parseFloat(total).toFixed(2) ?? "",
     },
   };
-  console.log("iviaPayload", JSON.stringify(iviaPayload));
+  console.info("iviaPayload", JSON.stringify(iviaPayload));
 
   /**
    * validate the payload and check if it is already processed
@@ -309,7 +307,7 @@ const loadP2PConsole = async (dynamoData, shipmentAparData) => {
     if (isError) {
       await sendSNSMessage(iviaTableData);
     }
-    console.log("iviaTableData", iviaTableData);
+    console.error("iviaTableData", iviaTableData);
     await putItem(IVIA_DDB, iviaTableData);
   }
 };
@@ -450,7 +448,7 @@ async function fetchDataFromTablesList(CONSOL_NO) {
      * Fetch shipment apar for liftgate based on shipmentDesc.FK_OrderNo
      */
     const FK_OrderNoList = [...new Set(shipmentDesc.map((e) => e.FK_OrderNo))];
-    console.log("FK_OrderNoList for cargo", FK_OrderNoList);
+    console.info("FK_OrderNoList for cargo", FK_OrderNoList);
 
     let shipmentAparCargo = [];
     for (let index = 0; index < FK_OrderNoList.length; index++) {
@@ -485,7 +483,7 @@ async function fetchDataFromTablesList(CONSOL_NO) {
 
     let shAparForEQData = await ddb.query(shAparForEQParam).promise();
     shAparForEQData = shAparForEQData.Items;
-    console.log("shAparForEQData", shAparForEQData);
+    console.info("shAparForEQData", shAparForEQData);
 
     let equipment = [];
     if (shAparForEQData.length > 0 && shAparForEQData[0].FK_EquipmentCode) {
@@ -500,7 +498,7 @@ async function fetchDataFromTablesList(CONSOL_NO) {
 
       const eqData = await ddb.query(equipmentParam).promise();
       equipment = eqData.Items;
-      console.log("equipment", eqData);
+      console.info("equipment", eqData);
     }
 
     /**
@@ -538,7 +536,7 @@ async function fetchDataFromTablesList(CONSOL_NO) {
       consolStopHeaders
     };
   } catch (error) {
-    console.log("error", error);
+    console.error("error", error);
     return {};
   }
 }
@@ -555,7 +553,7 @@ async function fetchDataFromTablesList(CONSOL_NO) {
 function validateAndCheckIfDataSentToIvia(payload, ConsolNo) {
   return new Promise(async (resolve, reject) => {
     let errorMsg = validatePayload(payload);
-    console.log("errorMsg", errorMsg);
+    console.info("errorMsg", errorMsg);
 
     try {
       //fetch from ivia table and check if data processed or not
@@ -567,9 +565,9 @@ function validateAndCheckIfDataSentToIvia(payload, ConsolNo) {
           ":ConsolNo": ConsolNo.toString(),
         },
       };
-      console.log("params", params);
+      console.info("params", params);
       const data = await ddb.query(params).promise();
-      console.log("data:ivia", data);
+      console.info("data:ivia", data);
 
       if (data.Items.length > 0) {
         //check if payload is processed or or in progress
@@ -612,69 +610,10 @@ function validateAndCheckIfDataSentToIvia(payload, ConsolNo) {
         }
       }
     } catch (error) {
-      console.log("dynamoError:", error);
+      console.error("dynamoError:", error);
       resolve({ check: false, errorMsg: "", isError: false });
     }
   });
 }
 
 module.exports = { loadP2PConsole };
-
-// every field is required only refNum2, specialInstructions may be empty
-// {
-//   "carrierId": 1000025, // hardcode  dev:- 1000025 stage:- 102
-//   "refNums": {
-//     "refNum1": "244264", //shipmentApar.ConsolNo
-//     "refNum2": "" // hardcode
-//   },
-//   "shipmentDetails": {
-//     "stops": [
-//       {
-//         "stopType": "P", // hardcode P for pickup
-//         "stopNum": 0,  // hardcode
-//         "housebills": ["6958454"], //  shipmentHeader.Housebill (1st we take FK_OrderNo from confirmationCost where FK_SeqNo < 9999 and then we filter the Housebill from shipmentHeader table based on orderNo)
-//         "address": {
-//           "address1": "1759 S linneman RD", // confirmationCost.ShipAddress1
-//           "city": "Mt Prospect", // confirmationCost.ShipCity
-//           "country": "US", //  confirmationCost.FK_ShipCountry
-//           "state": "IL", // confirmationCost.FK_ShipState
-//           "zip": "60056" //  confirmationCost.ShipZip
-//         },
-//         "companyName": "Omni Logistics", // confirmationCost.ShipName
-//         "cargo": [ // all data from shipmentDesc condition (shipmentDesc.ConsolNo === shipmentApar.ConsolNo && shipmentApar.Consolidation === "N")
-//           {
-//             "packageType": "", // shipmentDesc.FK_PieceTypeId :- "BOX" = "BOX" , "PLT" = "PAL" , other any value "PIE"
-//             "quantity": "1", // shipmentDesc.Pieces
-//             "length": 68, // shipmentDesc.Length
-//             "width": 48, // shipmentDesc.Width
-//             "height": 46, // shipmentDesc.Height
-//             "weight": 353, // shipmentDesc.Weight
-//             "stackable": "Y", // hardcode
-//             "turnable": "Y" // hardcode
-//           }
-//         ],
-//         "scheduledDate": 1637913600000, // check from code
-//         "specialInstructions": "" // check from code
-//       },
-//       {
-//         "stopType": "D", // hardcode D = delivery
-//         "stopNum": 1, // hardcode
-//         "housebills": ["6958454"], // same as P type
-//         "address": {
-//           "address1": "1414 Calconhook RD", // confirmationCost.ConAddress1
-//           "city": "Sharon Hill", // confirmationCost.ConCity
-//           "country": "US", // confirmationCost.FK_ConCountry
-//           "state": "PA", // confirmationCost.FK_ConState
-//           "zip": "19079" // confirmationCost.ConZip
-//         },
-//         "companyName": "Freight Force PHL", // confirmationCost.ConName
-//         "scheduledDate": 1638176400000, // check from code
-//         "specialInstructions": "" // check from code
-//       }
-//     ],
-//     "dockHigh": "N", //  [Y / N] default "N"
-//     "hazardous": "N", //   shipmentDesc?.Hazmat
-//     "liftGate": "N", //  shipmentApar.ChargeCode
-//     "unNum": "" // shipmentDesc.Description accepts only 4 degit number as string or empty string
-//   }
-// }
