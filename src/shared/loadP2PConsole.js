@@ -448,7 +448,6 @@ async function fetchDataFromTablesList(CONSOL_NO) {
      * Fetch shipment apar for liftgate based on shipmentDesc.FK_OrderNo
      */
     const FK_OrderNoList = [...new Set(shipmentDesc.map((e) => e.FK_OrderNo))];
-    console.info("FK_OrderNoList for cargo", FK_OrderNoList);
 
     let shipmentAparCargo = [];
     for (let index = 0; index < FK_OrderNoList.length; index++) {
@@ -483,7 +482,6 @@ async function fetchDataFromTablesList(CONSOL_NO) {
 
     let shAparForEQData = await ddb.query(shAparForEQParam).promise();
     shAparForEQData = shAparForEQData.Items;
-    console.info("shAparForEQData", shAparForEQData);
 
     let equipment = [];
     if (shAparForEQData.length > 0 && shAparForEQData[0].FK_EquipmentCode) {
@@ -498,7 +496,6 @@ async function fetchDataFromTablesList(CONSOL_NO) {
 
       const eqData = await ddb.query(equipmentParam).promise();
       equipment = eqData.Items;
-      console.info("equipment", eqData);
     }
 
     /**
@@ -565,7 +562,6 @@ function validateAndCheckIfDataSentToIvia(payload, ConsolNo) {
           ":ConsolNo": ConsolNo.toString(),
         },
       };
-      console.info("params", params);
       const data = await ddb.query(params).promise();
       console.info("data:ivia", data);
 
