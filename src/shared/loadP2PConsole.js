@@ -59,8 +59,7 @@ const loadP2PConsole = async (dynamoData, shipmentAparData) => {
   const shipmentDesc = dataSet.shipmentDesc;
   const shipmentInstructions = dataSet.shipmentInstructions;
   const equipment = dataSet.equipment.length > 0 ? dataSet.equipment[0] : {};
-  const customer = dataSet.customer.length > 0 ? dataSet.customer[0] : {};
-  const consolStopHeaders = dataSet.consolStopHeaders.length > 0 ? dataSet.consolStopHeaders[0] : {};
+  const customer = get(dataSet, "customer[0]", {})
 
   /**
    * we need to check in the shipmentHeader.OrderDate >= '2023:04:01 00:00:00' - for both nonconsol and consol -> if this condition satisfies, we send the event to Ivia, else we ignore
