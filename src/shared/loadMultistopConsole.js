@@ -57,7 +57,7 @@ const loadMultistopConsole = async (dynamoData, shipmentAparData) => {
   const shipmentApar = dataSet.shipmentApar;
   const shipmentHeader = dataSet.shipmentHeader;
   const shipmentDesc = dataSet.shipmentDesc;
-  const customer = dataSet.customer.length > 0 ? dataSet.customer[0] : {};
+  const customer = get(dataSet, "customer[0]", {})
   const consolStopHeaders = dataSet.consolStopHeaders;
   const consolStopItems = dataSet.consolStopItems;
   const shipmentInstructions = dataSet.shipmentInstructions;
