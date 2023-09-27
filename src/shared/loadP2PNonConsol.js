@@ -55,7 +55,6 @@ const loadP2PNonConsol = async (dynamoData, shipmentAparData) => {
    * shipmentDesc
    */
   const dataSet = await fetchDataFromTables(tableList, primaryKeyValue);
-  // console.info("dataSet", JSON.stringify(dataSet));
 
   const shipmentApar = shipmentAparData;
   const shipmentHeader = dataSet.shipmentHeader;
@@ -65,7 +64,6 @@ const loadP2PNonConsol = async (dynamoData, shipmentAparData) => {
   const equipment = dataSet.equipment.length > 0 ? dataSet.equipment[0] : {};
   const customer = dataSet.customer.length > 0 ? dataSet.customer[0] : {};
 
-  console.info("instructions table", shipmentInstructions)
   /**
    * we need to check in the shipmentHeader.OrderDate >= '2023:04:01 00:00:00' - for both nonconsol and consol -> if this condition satisfies, we send the event to Ivia, else we ignore
    * Ignore the event if there is no OrderDate or it is "1900
@@ -267,15 +265,6 @@ const loadP2PNonConsol = async (dynamoData, shipmentAparData) => {
     dtype.DeliveryDateTime,
     dtypeAddressData
   );
-  // if (dtype.ScheduledBy == "T") {
-  //   dStopTypeData.cutoffDate = await getGMTDiff(
-  //     shipmentHeader[0].ScheduledDateTimeRange,
-  //     dtypeAddressData
-  //   );
-  // }
-  // else {
-  //   dStopTypeData.cutoffDate = null
-  // }
 
   if (dtype.DeliveryTimeRange) {
     if (dtype.DeliveryTimeRange.slice(11) == "00:00:00.000") {
@@ -369,7 +358,6 @@ const loadP2PNonConsol = async (dynamoData, shipmentAparData) => {
        */
       await sendSNSMessage(iviaTableData);
     }
-    console.info("iviaTableData", iviaTableData);
     await putItem(IVIA_DDB, iviaTableData);
   } else {
     console.info("Already sent to IVIA or validation error");
@@ -403,7 +391,6 @@ function validateAndCheckIfDataSentToIvia(payload, shipmentApar) {
           ":FK_OrderNo": shipmentApar.FK_OrderNo.toString(),
         },
       };
-      console.info("params", params);
       const data = await ddb.query(params).promise();
       console.info("data:ivia", data);
 
@@ -517,8 +504,7 @@ function getTablesAndPrimaryKey(tableName, dynamoData) {
 
     return { tableList, primaryKeyValue };
   } catch (error) {
-    console.info("error:unable to select table", error);
-    console.info("tableName", tableName);
+    console.error("error:unable to select table",tableName, error);
     throw error;
   }
 }
@@ -585,7 +571,6 @@ async function fetchDataFromTables(tableList, primaryKeyValue) {
     const FK_OrderNoList = [
       ...new Set(newObj.shipmentDesc.map((e) => e.FK_OrderNo)),
     ];
-    console.info("FK_OrderNoList for cargo", FK_OrderNoList);
 
     let shipmentAparCargo = [];
     for (let index = 0; index < FK_OrderNoList.length; index++) {
@@ -601,9 +586,7 @@ async function fetchDataFromTables(tableList, primaryKeyValue) {
       let sac = await ddb.query(sapcParams).promise();
       shipmentAparCargo = [...shipmentAparCargo, ...sac.Items];
     }
-    // console.info("shipmentAparCargo", shipmentAparCargo);
     newObj.shipmentAparCargo = shipmentAparCargo;
-    console.info("newObj.shipmentHeader", newObj.shipmentHeader);
 
     /**
      * EQUIPMENT_TABLE
@@ -623,7 +606,6 @@ async function fetchDataFromTables(tableList, primaryKeyValue) {
       };
 
       equipment = await ddb.query(equipmentParam).promise();
-      console.info("equipment", equipment);
       equipment = equipment.Items;
     }
     newObj.equipment = equipment;

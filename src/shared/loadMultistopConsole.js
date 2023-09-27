@@ -54,7 +54,6 @@ const loadMultistopConsole = async (dynamoData, shipmentAparData) => {
    * consolStopItems
    */
   const dataSet = await fetchDataFromTablesList(CONSOL_NO);
-  console.info("dataSet", JSON.stringify(dataSet));
   const shipmentApar = dataSet.shipmentApar;
   const shipmentHeader = dataSet.shipmentHeader;
   const shipmentDesc = dataSet.shipmentDesc;
@@ -307,7 +306,6 @@ const loadMultistopConsole = async (dynamoData, shipmentAparData) => {
     const element = margedStops[index];
     const addressData = await checkAddressByGoogleApi(element.address);
     const cutoffDateDiff = await getGMTDiff(element.cutoffDate, addressData);
-    console.info("addressData", addressData);
     stopsList = [
       ...stopsList,
       {
@@ -392,7 +390,6 @@ const loadMultistopConsole = async (dynamoData, shipmentAparData) => {
     if (isError) {
       await sendSNSMessage(iviaTableData);
     }
-    console.info("iviaTableData", iviaTableData);
     await putItem(IVIA_DDB, iviaTableData);
   }
 };
@@ -629,7 +626,6 @@ async function fetchDataFromTablesList(CONSOL_NO) {
      * Fetch shipment apar for liftgate based on shipmentDesc.FK_OrderNo
      */
     const FK_OrderNoList = [...new Set(shipmentDesc.map((e) => e.FK_OrderNo))];
-    console.info("FK_OrderNoList for cargo", FK_OrderNoList);
 
     let shipmentAparCargo = [];
     for (let index = 0; index < FK_OrderNoList.length; index++) {
@@ -663,7 +659,6 @@ async function fetchDataFromTablesList(CONSOL_NO) {
     };
     let shAparForEQData = await ddb.query(shAparForEQParam).promise();
     shAparForEQData = shAparForEQData.Items;
-    console.info("shAparForEQData", shAparForEQData);
 
     let equipment = [];
     if (shAparForEQData.length > 0 && shAparForEQData[0].FK_EquipmentCode) {
@@ -678,7 +673,6 @@ async function fetchDataFromTablesList(CONSOL_NO) {
 
       const eqData = await ddb.query(equipmentParam).promise();
       equipment = eqData.Items;
-      console.info("equipment", eqData);
     }
 
     /**
