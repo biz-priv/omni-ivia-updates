@@ -25,6 +25,7 @@ function:
     CONSOL_STOP_HEADERS: ${ssm:/omni-wt-rt-updates/${self:provider.stage}/consol-stop-headers/ddb.tableName~true}
     CONSOL_STOP_ITEMS: ${ssm:/omni-wt-rt-updates/${self:provider.stage}/consol-stop-items/ddb.tableName~true}
     EQUIPMENT_TABLE: ${ssm:/omni-wt-rt-updates/${self:provider.stage}/equipment/ddb.tableName~true}
+    CUSTOMER_TABLE: ${ssm:/omni-wt-rt-updates/${self:provider.stage}/customer/ddb.tableName~true}
     CONFIRMATION_COST_INDEX_KEY_NAME: ${ssm:/omni-wt-rt-updates/${self:provider.stage}/confirmation-cost/ddb.orderNoIndex}
     INSTRUCTIONS_INDEX_KEY_NAME: ${ssm:/omni-wt-rt-updates/${self:provider.stage}/instructions/ddb.orderNoIndex}
     IVIA_DDB: ${ssm:/omni-ivia/${self:provider.stage}/ddb.tableName}

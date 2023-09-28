@@ -159,6 +159,7 @@ function validatePayload(payload) {
       refNums: Joi.object({
         refNum1: Joi.string().required(), // required
         refNum2: Joi.string().allow(""),
+        refNum3: Joi.string().allow(""),
       }).required(),
       shipmentDetails: Joi.object({
         stops: Joi.array()
@@ -200,6 +201,16 @@ function validatePayload(payload) {
                   "any.required": `"scheduledDate" must be a valid DATE and greater than 2023-01-01`,
                 }), // required
               specialInstructions: Joi.string().allow(""),
+              cutoffDate: Joi.number()
+                .integer()
+                .min(0)
+                .allow(null)
+                .required()
+                .messages({
+                  "number.base": `"cutoffDate" must be a valid DATE and greater than 2023-01-01`,
+                  "number.min": `"cutoffDate" must be a valid DATE and greater than 2023-01-01`,
+                  "any.required": `"cutoffDate" must be a valid DATE and greater than 2023-01-01`,
+                })
             }).unknown()
           )
           .min(2)
@@ -209,6 +220,7 @@ function validatePayload(payload) {
         liftGate: Joi.string().required(), // required shipmentApar.ChargeCode
         unNum: Joi.any().allow("").required(), // accepts only 4 degit number as string
         notes: Joi.string().allow("").required(),
+        revenue: Joi.number().required(),
       }).required(),
     }).required();
 
@@ -291,11 +303,11 @@ async function getGMTDiff(dateTime, address) {
       );
       return unixDateTime;
     } else {
-      return "";
+      return null;
     }
   } catch (error) {
     console.log("error", error);
-    return "";
+    return null;
   }
 }
 
