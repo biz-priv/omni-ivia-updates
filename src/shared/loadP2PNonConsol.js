@@ -297,6 +297,9 @@ const loadP2PNonConsol = async (dynamoData, shipmentAparData) => {
   );
   const instructionNote = "\r\n" + get(instructionNoteArray[0], "Note", "")
 
+  const notesValue = get(equipment,"Description", "") + "\r\n" + get(instructionNoteArray[0], "Note", "")
+  console.info("notes", notesValue)
+
 
   //IVIA payload
   const iviaPayload = {
@@ -312,9 +315,7 @@ const loadP2PNonConsol = async (dynamoData, shipmentAparData) => {
       hazardous: getHazardous(filteredSD),
       liftGate: getLiftGate(shipmentAparCargo, shipmentHeader),
       unNum: getUnNum(filteredSD), // accepts only 4 degit number as string
-      notes:
-        (equipment?.Description + "\r\n" ?? "") +
-        (instructionNote),
+      notes: notesValue.slice(0,199),
       revenue: +parseFloat(total).toFixed(2) ?? "",
     },
   };
