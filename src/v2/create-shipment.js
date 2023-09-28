@@ -154,9 +154,15 @@ function iviaCreateShipment(payload) {
         },
         data: JSON.stringify(payload),
       };
+      console.log("Request to ivia", momentTZ
+        .tz("America/Chicago")
+        .format("YYYY:MM:DD HH:mm:ss:SSS"))
 
       axios(config)
         .then(function (response) {
+          console.log("Response recieved from ivia", momentTZ
+            .tz("America/Chicago")
+            .format("YYYY:MM:DD HH:mm:ss:SSS"))
           resolve({ shipmentId: response.data, status: getStatus().SUCCESS });
         })
         .catch(function (error) {
