@@ -1,4 +1,5 @@
 const AWS = require("aws-sdk");
+const sns = new AWS.SNS();
 const axios = require("axios");
 const momentTZ = require("moment-timezone");
 const { putItem } = require("../shared/dynamo");
@@ -71,7 +72,7 @@ module.exports.handler = async (event, context, callback) => {
         console.error('Error', error);
         // Send a notification to the SNS topic
         const params = {
-            Message: `An error occurred in function ${process.env.FUNCTION_NAME}. Error details: ${err}.`,
+            Message: `An error occurred in function ${process.env.FUNCTION_NAME}. Error details: ${error}.`,
             TopicArn: process.env.ERROR_SNS_ARN,
         };
         await sns.publish(params).promise();
