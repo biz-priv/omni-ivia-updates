@@ -6,7 +6,7 @@ const fs = require('fs');
 const FormData = require('form-data');
 const { v4: uuidv4 } = require('uuid');
 const Flatted = require('flatted');
-
+const sns = new AWS.SNS();
 
 module.exports.handler = async (event, context, callback) => {
     try {
@@ -71,7 +71,7 @@ module.exports.handler = async (event, context, callback) => {
         console.error('Error', error);
         // Send a notification to the SNS topic
         const params = {
-            Message: `An error occurred in function ${process.env.FUNCTION_NAME}. Error details: ${err}.`,
+            Message: `An error occurred in function ${process.env.FUNCTION_NAME}. Error details: ${error}.`,
             TopicArn: process.env.ERROR_SNS_ARN,
         };
         await sns.publish(params).promise();
