@@ -13,7 +13,10 @@ function:
     exclude:
       - "**/*"
   events:
-    - stream: ${ssm:/omni-ivia/${self:provider.stage}/iviaResponse/ddb.streamArn}
+    - stream:
+        arn: ${ssm:/omni-ivia/${self:provider.stage}/iviaResponse/ddb.streamArn}
+        batchSize: 5
+        maximumRetryAttempts: 3
   environment:
     WT_WEBSLI_API_URL: ${ssm:/omni-dw/${self:provider.stage}/websli/api/url} #To do check for values for PROD
     ADD_DOCUMENT_API_URL: ${ssm:/omni-ivia/${self:provider.stage}/add-document-api/url} #To do check for values for PROD
