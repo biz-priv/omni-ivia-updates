@@ -4,6 +4,7 @@ function:
   handler: src/v2/create-shipment.handler
   # provisionedConcurrency: 5
   # concurrencyAutoscaling: true
+  timeout: 30
   layers:
     - { Ref: OmniIviaLayerLambdaLayer }
   package:
