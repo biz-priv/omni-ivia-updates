@@ -7,7 +7,7 @@ const fs = require('fs');
 const FormData = require('form-data');
 const { v4: uuidv4 } = require('uuid');
 const Flatted = require('flatted');
-
+const sns = new AWS.SNS();
 
 module.exports.handler = async (event, context, callback) => {
     try {

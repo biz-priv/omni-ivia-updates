@@ -89,7 +89,7 @@ async function queryWithPartitionKey(tableName, key) {
       KeyConditionExpression: expression,
       ExpressionAttributeValues: expressionAtts,
     };
-    return await dynamodb.query(params).promise();
+    return await dbReadWithLastEvaluatedKey(params);
   } catch (e) {
     console.error(
       "Query Item With Partition key Error: ",
@@ -99,6 +99,20 @@ async function queryWithPartitionKey(tableName, key) {
     );
     throw "QueryItemError";
   }
+}
+
+async function dbReadWithLastEvaluatedKey(params) {
+  async function helper(params) {
+    let result = await dynamodb.query(params).promise();
+    let data = result.Items;
+    if (result.LastEvaluatedKey) {
+      params.ExclusiveStartKey = result.LastEvaluatedKey;
+      data = data.concat(await helper(params));
+    }
+    return data;
+  }
+  let readData = await helper(params);
+  return { Items: readData };
 }
 
 async function createOrUpdateDynamo(tableName, key, item) {

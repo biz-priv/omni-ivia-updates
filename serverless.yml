@@ -39,8 +39,8 @@ provider:
     - Effect: "Allow"
       Action:
         - "sns:*"
-      Resource: !Ref ErrorNotification
-  runtime: nodejs14.x
+      Resource: "*"
+  runtime: nodejs18.x
   environment:
     REGION: ${self:custom.region}
     STAGE: ${self:custom.stage}
@@ -81,8 +81,6 @@ resources:
   Resources:
     IviaDynamoTable: ${file(config/dynamoDB/Ivia.yaml):IviaDynamoTable}
     IviaResponseDynamoTable: ${file(config/dynamoDB/iviaResponse.yaml):IviaResponseDynamoTable}
-
-    ErrorNotification: ${file(config/sns/errorNotificationTopicSns.yml):ErrorNotification}
     
     # ssm parameter
     IviaResponseDynamoTableStreamArn: ${file(config/ssm/iviaResDdbStreamArnSsm.yml):IviaResponseDynamoTableStreamArn}
