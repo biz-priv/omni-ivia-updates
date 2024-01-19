@@ -23,4 +23,4 @@ function:
     IVIA_XML_API_PASS: ${ssm:/omni-ivia/${self:provider.stage}/createShipment/xmlUpdate/password}
     IVIA_RESPONSE_DDB: ${ssm:/omni-ivia/${self:provider.stage}/iviaResponse/ddb.tableName}
     IVIA_DDB: ${ssm:/omni-ivia/${self:provider.stage}/ddb.tableName}
-    ERROR_NOTIFICATION_SNS_ARN: !Ref ErrorNotification
+    ERROR_NOTIFICATION_SNS_ARN: ${ssm:/omni-reports/${self:provider.stage}/error-notification/sns/arn}
