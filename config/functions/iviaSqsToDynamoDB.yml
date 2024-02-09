@@ -35,7 +35,7 @@ function:
     TIMEZONE_ZIP_CR: ${ssm:/omni-wt-rt-updates/${self:provider.stage}/timezone-zip-cr/ddb.tableName~true}
     ZIP_CODES: ${ssm:/omni-wt-rt-updates/${self:provider.stage}/zip-codes/ddb.tableName~true}
     ADDRESS_MAPPING_G_API_KEY: ${ssm:/omni-ivia/${self:provider.stage}/google/api.Key~true}
-    ERROR_NOTIFICATION_SNS_ARN: ${ssm:/omni-reports/${self:provider.stage}/error-notification/sns/arn}
+    ERROR_NOTIFICATION_SNS_ARN: ${ssm:/omni-ivia/${self:provider.stage}/error-notification/sns/arn}
 
   events:
     - sqs:
