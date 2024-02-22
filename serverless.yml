@@ -59,6 +59,7 @@ custom:
 plugins:
   - serverless-offline
   - serverless-provisioned-concurrency-autoscaling
+  - serverless-plugin-existing-s3
 
 package:
   individually: true
@@ -76,6 +77,8 @@ functions:
   iviaSqsToDynamoDB: ${file(config/functions/iviaSqsToDynamoDB.yml):function}
   create-shipment: ${file(config/functions/create-shipment.yml):function}
   add-document-api: ${file(config/functions/add-document.yml):function}
+  ivia-milhouse-movement-updates-query: ${file(config/functions/ivia-milhouse-movement-updates-query.yml):function}
+  ivia-milhouse-movement-updates-processor: ${file(config/functions/ivia-milhouse-movement-updates-processor.yml):function}
 
 resources:
   Resources:

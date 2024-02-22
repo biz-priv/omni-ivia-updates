@@ -1,0 +1,23 @@
+---
+function:
+    name: ivia-milhouse-movement-updates-processor-${self:provider.stage}
+    handler: src/v1/ivia-milhouse-movement-updates-processor.handler
+    memorySize: 1024
+    timeout: 900
+    layers:
+        - { Ref: OmniIviaLayerLambdaLayer }
+    package:
+        include:
+            - "src/v1/ivia-milhouse-movement-updates-processor.js"
+            - "src/shared/**"
+        exclude:
+            - "**/*"
+    events:
+        - existingS3:
+              bucket: 'ivia-milhouse-movement-athena-result-dev'
+              events:
+                  - s3:ObjectCreated:*
+              rules:
+                  - prefix: "pending/"
+                  - suffix: ".csv"
+    # environment:

@@ -27,6 +27,7 @@
     "lodash.get": "^4.4.2",
     "moment": "^2.29.3",
     "moment-timezone": "^0.5.39",
+    "serverless-plugin-existing-s3": "^2.4.0",
     "uuid": "^9.0.0",
     "xmlbuilder2": "^3.0.2"
   },

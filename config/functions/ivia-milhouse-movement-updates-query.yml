@@ -1,0 +1,22 @@
+---
+function:
+  name: ivia-milhouse-movement-updates-query-${self:provider.stage}
+  handler: src/v1/ivia-milhouse-movement-updates-query.handler
+  memorySize: 1024
+  timeout: 900
+  layers:
+    - { Ref: OmniIviaLayerLambdaLayer }
+  package:
+    include:
+      - "src/v1/ivia-milhouse-movement-updates-query.js"
+      - "src/shared/**"
+    exclude:
+      - "**/*"
+  # events:
+  #   - stream:
+  #       arn: ${ssm:/omni-ivia/${self:provider.stage}/iviaResponse/ddb.streamArn}
+  #       batchSize: 5
+  #       maximumRetryAttempts: 3
+  # environment:
+
+
