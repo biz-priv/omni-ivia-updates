@@ -1,4 +1,5 @@
 const AWS = require('aws-sdk');
+const { get } = require('lodash')
 const s3 = new AWS.S3();
 
 module.exports.handler = async (event, context, callback) => {
