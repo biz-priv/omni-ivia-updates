@@ -292,8 +292,10 @@ const loadP2PNonConsol = async (dynamoData, shipmentAparData) => {
 
   let totalArray = []
   for (let i = 0; i < dataSet.shipmentApar.length; i++) {
-    const element = dataSet.shipmentApar[i].Total;
-    totalArray.push(element)
+    if(dataSet.shipmentApar[i].FK_VendorId==IVIA_VENDOR_ID){
+      const element = dataSet.shipmentApar[i].Total;
+      totalArray.push(element)
+    }
   }
 
   const total = totalArray.reduce((accumulator, currentValue) => {
