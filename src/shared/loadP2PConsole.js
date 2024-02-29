@@ -248,7 +248,17 @@ const loadP2PConsole = async (dynamoData, shipmentAparData) => {
     dStopTypeData.cutoffDate = null
   }
 
-  const total = shipmentApar[0].Total
+  // const total = shipmentApar[0].Total
+
+  let totalArray = []
+  for (let i = 0; i < shipmentApar.length; i++) {
+    const element = shipmentApar[i].Total;
+    totalArray.push(element)
+  }
+
+  const total = totalArray.reduce((accumulator, currentValue) => {
+    return accumulator + parseFloat(currentValue);
+  }, 0);
 
   //IVIA payload
   const iviaPayload = {
