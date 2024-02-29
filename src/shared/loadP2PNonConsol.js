@@ -288,8 +288,17 @@ const loadP2PNonConsol = async (dynamoData, shipmentAparData) => {
   const filteredSD = shipmentDesc.filter((e) =>
     ORDER_NO_LIST.includes(e.FK_OrderNo)
   );
-  const total = dataSet.shipmentApar[0].Total
+  // const total = dataSet.shipmentApar[0].Total
 
+  let totalArray = []
+  for (let i = 0; i < dataSet.shipmentApar.length; i++) {
+    const element = dataSet.shipmentApar[i].Total;
+    totalArray.push(element)
+  }
+
+  const total = totalArray.reduce((accumulator, currentValue) => {
+    return accumulator + parseFloat(currentValue);
+  }, 0);
 
 
   const instructionNoteArray = shipmentInstructions.filter(
