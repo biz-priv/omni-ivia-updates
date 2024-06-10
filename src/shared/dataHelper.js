@@ -1,3 +1,10 @@
+/*
+* File: src\shared\dataHelper.js
+* Project: Omni-ivia-updates
+* Author: Bizcloud Experts
+* Date: 2023-08-30
+* Confidential and Proprietary
+*/
 const AWS = require("aws-sdk");
 
 /**

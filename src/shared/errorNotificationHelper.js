@@ -1,3 +1,10 @@
+/*
+* File: src\shared\errorNotificationHelper.js
+* Project: Omni-ivia-updates
+* Author: Bizcloud Experts
+* Date: 2023-03-15
+* Confidential and Proprietary
+*/
 const AWS = require("aws-sdk");
 /**
  * sns publish function
