@@ -5,6 +5,8 @@ function:
   # provisionedConcurrency: 5
   # concurrencyAutoscaling: true
   timeout: 30
+  tags:
+    Name: create-shipment 
   layers:
     - { Ref: OmniIviaLayerLambdaLayer }
   package:
