@@ -6,7 +6,10 @@ provider:
   stage: ${opt:stage, 'dev'}
   versionFunctions: false
   tags: ${self:custom.tags}
-  stackTags: ${self:custom.tags}
+  stackTags: 
+    Application: Omni ivia updates
+    CreateBy: BizCloudExperts
+    Environment: ${self:provider.stage}
   iamRoleStatements:
     - Effect: "Allow"
       Action:
