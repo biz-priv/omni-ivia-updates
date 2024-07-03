@@ -1,3 +1,10 @@
+/*
+* File: src\shared\loadP2PConsole.js
+* Project: Omni-ivia-updates
+* Author: Bizcloud Experts
+* Date: 2024-02-29
+* Confidential and Proprietary
+*/
 const AWS = require("aws-sdk");
 const {
   getLiftGate,

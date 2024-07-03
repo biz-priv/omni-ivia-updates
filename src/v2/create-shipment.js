@@ -1,3 +1,10 @@
+/*
+* File: src\v2\create-shipment.js
+* Project: Omni-ivia-updates
+* Author: Bizcloud Experts
+* Date: 2023-09-28
+* Confidential and Proprietary
+*/
 const AWS = require("aws-sdk");
 const { v4: uuidv4 } = require("uuid");
 const momentTZ = require("moment-timezone");

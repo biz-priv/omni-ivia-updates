@@ -1,3 +1,10 @@
+/*
+* File: src\v1\iviaSqsToDynamoDB.js
+* Project: Omni-ivia-updates
+* Author: Bizcloud Experts
+* Date: 2023-03-18
+* Confidential and Proprietary
+*/
 const AWS = require("aws-sdk");
 const { v4: uuidv4 } = require("uuid");
 const moment = require("moment");

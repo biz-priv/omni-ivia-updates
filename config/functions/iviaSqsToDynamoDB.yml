@@ -4,6 +4,8 @@ function:
   handler: src/v2/iviaSqsToDynamoDB.handler
   memorySize: 1024
   timeout: 300
+  tags:
+    Name: sqs-to-dynamo-db
   # provisionedConcurrency: 5
   # concurrencyAutoscaling: true
   layers:

@@ -1,3 +1,10 @@
+/*
+* File: src\v2\iviaSqsToDynamoDB.js
+* Project: Omni-ivia-updates
+* Author: Bizcloud Experts
+* Date: 2023-03-24
+* Confidential and Proprietary
+*/
 const AWS = require("aws-sdk");
 const { prepareBatchFailureObj, setDelay } = require("../shared/dataHelper");
 const { loadP2PNonConsol } = require("../shared/loadP2PNonConsol");

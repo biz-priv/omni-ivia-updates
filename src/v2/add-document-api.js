@@ -1,3 +1,10 @@
+/*
+* File: src\v2\add-document-api.js
+* Project: Omni-ivia-updates
+* Author: Bizcloud Experts
+* Date: 2024-02-09
+* Confidential and Proprietary
+*/
 const AWS = require("aws-sdk");
 const sns = new AWS.SNS();
 const axios = require("axios");
