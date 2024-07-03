@@ -4,10 +4,10 @@ const { loadP2PNonConsol } = require("../shared/loadP2PNonConsol");
 const { loadP2PConsole } = require("../shared/loadP2PConsole");
 const { loadMultistopConsole } = require("../shared/loadMultistopConsole");
 
-const { SHIPMENT_APAR_TABLE } = process.env; //"T19262"
+const { SHIPMENT_APAR_TABLE,IVIA_VENDOR_ID } = process.env; //"T19262"
 
 module.exports.handler = async (event, context, callback) => {
-  //TODO:- stop stage events
+
   if (process.env.STAGE.toLowerCase() === "stg") {
     return "Success";
   }
@@ -19,10 +19,10 @@ module.exports.handler = async (event, context, callback) => {
     const faildSqsItemList = [];
 
     //we may have multiple sqs events so using for loop
-    for (let index = 0; index < sqsEventRecords.length; index++) {
+    for (const element of sqsEventRecords) {
       try {
         //pick sqs record
-        const sqsItem = sqsEventRecords[index];
+        const sqsItem = element;
 
         //pick the dynamo record from sqs event
         const dynamoData = JSON.parse(sqsItem.body);
@@ -40,6 +40,13 @@ module.exports.handler = async (event, context, callback) => {
         const shipmentAparData = AWS.DynamoDB.Converter.unmarshall(
           dynamoData.NewImage
         );
+
+        if (shipmentAparData.FK_VendorId !== IVIA_VENDOR_ID) {
+          console.info(
+            "🚀 ~ file: iviaSqsToDynamoDB.js:45 ~ module.exports.handler: Skipping this record as it is not IVIA shipment."
+          );
+          continue;
+        }
 
         /**
          * if consol no is 0 then its a P2P Non Consol
