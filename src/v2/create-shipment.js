@@ -27,6 +27,7 @@ const {
   IVIA_XML_UPDATE_URL,
   IVIA_RESPONSE_DDB,
   STAGE,
+  VENDOR_INVOICE_API_ENDPOINT
 } = process.env;
 
 // const IVIA_CREATE_SHIPMENT_URL =
@@ -181,21 +182,7 @@ module.exports.handler = async (event, context, callback) => {
                 <div class="container">
                   <p>Dear Team,</p>
                   <p>There was an error updating the Vendor Reference for housebill: <strong>${housebill}</strong>.</p>
-                  <p><span class="highlight">IVIA Shipment Number:</span> <strong>${_.get(
-                    iviaCSRes,
-                    "shipmentId",
-                    ""
-                  )}</strong><br>
-                    <span class="highlight">Housebill:</span> <strong>${_.get(
-                      streamRecord,
-                      "Housebill",
-                      ""
-                    )}</strong><br>
-                    <span class="highlight">File No:</span> <strong>${_.get(
-                      streamRecord,
-                      "FK_OrderNo",
-                      ""
-                    )}</strong></p>
+                  <p><strong>Error Details:</strong>${formatErrorMessage(error.message)}</p>
                   <p>Thank you,<br>
                   Omni Automation System</p>
                   <p style="font-size: 0.9em; color: #888;">Note: This is a system generated email, Please do not reply to this email.</p>
@@ -203,7 +190,7 @@ module.exports.handler = async (event, context, callback) => {
               </body>
               </html>
               `,
-                subject: `${STAGE.toUpperCase()} - Error: Vendor Reference Update Failed (Housebill: ${housebill}, IVIA Shipment Number: ${
+                subject: `${STAGE.toUpperCase()} - Vendor Reference Update Failed (Housebill: ${housebill}, IVIA Shipment Number: ${
                   iviaCSRes.shipmentId
                 })`,
               });
@@ -256,21 +243,7 @@ module.exports.handler = async (event, context, callback) => {
                     "ConsolNo",
                     ""
                   )}</strong>.</p>
-                  <p><span class="highlight">IVIA Shipment Number:</span> <strong>${_.get(
-                    iviaCSRes,
-                    "shipmentId",
-                    ""
-                  )}</strong><br>
-                    <span class="highlight">Housebill:</span> <strong>${_.get(
-                      streamRecord,
-                      "Housebill",
-                      ""
-                    )}</strong><br>
-                    <span class="highlight">File No:</span> <strong>${_.get(
-                      streamRecord,
-                      "FK_OrderNo",
-                      ""
-                    )}</strong></p>
+                 <p><strong>Error Details:</strong>${formatErrorMessage(error.message)}</p>
                   <p>Thank you,<br>
                   Omni Automation System</p>
                   <p style="font-size: 0.9em; color: #888;">Note: This is a system generated email, Please do not reply to this email.</p>
@@ -278,7 +251,7 @@ module.exports.handler = async (event, context, callback) => {
               </body>
               </html>
               `,
-              subject: `${STAGE.toUpperCase()} - Error: Vendor Reference Update Failed (Consolidation: ${_.get(
+              subject: `${STAGE.toUpperCase()} - Vendor Reference Update Failed (Consolidation: ${_.get(
                 streamRecord,
                 "ConsolNo",
                 ""
@@ -296,6 +269,10 @@ module.exports.handler = async (event, context, callback) => {
     return "error";
   }
 };
+
+function formatErrorMessage(message) {
+  return message.replace(/\n/g, '<br>');
+}
 
 /**
  * create shipment api
@@ -400,7 +377,7 @@ async function updateVendorReference({
         vendorInvoiceRequest: {
           housebill,
           operation: "UPDATE",
-          vendorReference: shipmentId,
+          vendorReference: shipmentId.toString(),
           vendorId: "T19262",
         },
       }
@@ -408,7 +385,7 @@ async function updateVendorReference({
         vendorInvoiceRequest: {
           fileNumber: consolNo,
           operation: "UPDATE",
-          vendorReference: shipmentId,
+          vendorReference: shipmentId.toString(),
           vendorId: "T19262",
         },
       };
@@ -440,7 +417,7 @@ async function updateVendorReference({
       \nError Details: ${errorMessage}
       \nPayload:
       \n${JSON.stringify(data)}
-      \nNote: The Shipment is tendered to PB with PRO: ${shipmentId} but failed to update the vendor reference.
+      \nNote: The Shipment is tendered to IVIA with Shipment Number: ${shipmentId} but failed to update the vendor reference.
     `);
   }
 }
