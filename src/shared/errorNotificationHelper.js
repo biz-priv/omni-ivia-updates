@@ -6,6 +6,8 @@
 * Confidential and Proprietary
 */
 const AWS = require("aws-sdk");
+const ses = new AWS.SES();
+
 /**
  * sns publish function
  * @param {*} params

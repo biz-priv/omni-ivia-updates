@@ -17,7 +17,6 @@ const {
   sendSESEmail,
 } = require("../shared/errorNotificationHelper");
 const _ = require("lodash");
-const ses = new AWS.SES();
 
 const {
   IVIA_DDB,
@@ -420,7 +419,7 @@ async function updateVendorReference({
     url: VENDOR_INVOICE_API_ENDPOINT,
     headers: {
       "Content-Type": "application/json",
-      "x-api-key": LIVE_LOGISTICS_API_KEY,
+      "x-api-key": "ymSMkcdTJ5E7A4rP6em02qga3anLajSRCTpuf610",
     },
     data: JSON.stringify(data),
   };
