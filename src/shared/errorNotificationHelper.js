@@ -51,4 +51,33 @@ async function sendSNSMessage(data) {
   }
 }
 
-module.exports = { sendSNSMessage };
+async function sendSESEmail({ message, subject }) {
+  try {
+    const params = {
+      Destination: {
+        ToAddresses: ["mohammed.sazeed@bizcloudexperts.com", "jahir.uddin@bizcloudexperts.com"],
+      },
+      Message: {
+        Body: {
+          Html: {
+            Data: message,
+            Charset: "UTF-8",
+          },
+        },
+        Subject: {
+          Data: subject,
+          Charset: "UTF-8",
+        },
+      },
+      Source: process.env.OMNI_NO_REPLY_EMAIL,
+    };
+    console.info("🚀 ~ file: helper.js:1747 ~ sendSESEmail ~ params:", params);
+
+    await ses.sendEmail(params).promise();
+  } catch (error) {
+    console.error("Error sending email with SES:", error);
+    throw error;
+  }
+}
+
+module.exports = { sendSNSMessage, sendSESEmail };

@@ -26,3 +26,4 @@ function:
     IVIA_RESPONSE_DDB: ${ssm:/omni-ivia/${self:provider.stage}/iviaResponse/ddb.tableName}
     IVIA_DDB: ${ssm:/omni-ivia/${self:provider.stage}/ddb.tableName}
     ERROR_NOTIFICATION_SNS_ARN: ${ssm:/omni-ivia/${self:provider.stage}/error-notification/sns/arn}
+    OMNI_NO_REPLY_EMAIL: ${ssm:/omni-204-create-shipment/${self:provider.stage}/omni-no-reply/email}
