@@ -6,7 +6,7 @@ function:
   # concurrencyAutoscaling: true
   timeout: 30
   tags:
-    Name: create-shipment 
+    Name: omni-ivia-create-shipment-${self:provider.stage} 
   layers:
     - { Ref: OmniIviaLayerLambdaLayer }
   package:

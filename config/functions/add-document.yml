@@ -5,7 +5,7 @@ function:
   memorySize: 1024
   timeout: 900
   tags:
-    Name: add-document-api
+    Name: omni-ivia-add-document-api-${self:provider.stage}
   layers:
     - { Ref: OmniIviaLayerLambdaLayer }
   package:
