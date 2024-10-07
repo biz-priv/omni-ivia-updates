@@ -28,3 +28,4 @@ function:
     ERROR_NOTIFICATION_SNS_ARN: ${ssm:/omni-ivia/${self:provider.stage}/error-notification/sns/arn}
     OMNI_NO_REPLY_EMAIL: ${ssm:/omni-204-create-shipment/${self:provider.stage}/omni-no-reply/email}
     VENDOR_INVOICE_API_ENDPOINT: ${ssm:/omni-dw/${self:provider.stage}/vendor-invoice/api/endpoint}
+    ADMIN_API_KEY: ${ssm:/omni-dw/${self:provider.stage}/admin/apiKey}

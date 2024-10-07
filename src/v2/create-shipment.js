@@ -27,7 +27,8 @@ const {
   IVIA_XML_UPDATE_URL,
   IVIA_RESPONSE_DDB,
   STAGE,
-  VENDOR_INVOICE_API_ENDPOINT
+  VENDOR_INVOICE_API_ENDPOINT,
+  ADMIN_API_KEY
 } = process.env;
 
 // const IVIA_CREATE_SHIPMENT_URL =
@@ -396,7 +397,7 @@ async function updateVendorReference({
     url: VENDOR_INVOICE_API_ENDPOINT,
     headers: {
       "Content-Type": "application/json",
-      "x-api-key": "ymSMkcdTJ5E7A4rP6em02qga3anLajSRCTpuf610",
+      "x-api-key": ADMIN_API_KEY,
     },
     data: JSON.stringify(data),
   };
