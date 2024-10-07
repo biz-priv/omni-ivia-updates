@@ -40,6 +40,10 @@ provider:
       Action:
         - "sns:*"
       Resource: "*"
+    - Effect: "Allow"
+      Action:
+        - "ses:*"
+      Resource: "*"      
   runtime: nodejs18.x
   environment:
     REGION: ${self:custom.region}

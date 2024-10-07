@@ -22,7 +22,10 @@ function:
     IVIA_CREATE_SHIPMENT_TOKEN: ${ssm:/omni-ivia/${self:provider.stage}/createShipment/token}
     IVIA_XML_UPDATE_URL: ${ssm:/omni-ivia/${self:provider.stage}/createShipment/xmlUpdate/url}
     IVIA_XML_API_USER_ID: ${ssm:/omni-ivia/${self:provider.stage}/createShipment/xmlUpdate/userId}
-    IVIA_XML_API_PASS: ${ssm:/omni-ivia/${self:provider.stage}/createShipment/xmlUpdate/password}
+    IVIA_XML_API_PASS: ${ssm:/omni-dw/${self:provider.stage}/wt/password}
     IVIA_RESPONSE_DDB: ${ssm:/omni-ivia/${self:provider.stage}/iviaResponse/ddb.tableName}
     IVIA_DDB: ${ssm:/omni-ivia/${self:provider.stage}/ddb.tableName}
     ERROR_NOTIFICATION_SNS_ARN: ${ssm:/omni-ivia/${self:provider.stage}/error-notification/sns/arn}
+    OMNI_NO_REPLY_EMAIL: ${ssm:/omni-204-create-shipment/${self:provider.stage}/omni-no-reply/email}
+    VENDOR_INVOICE_API_ENDPOINT: ${ssm:/omni-dw/${self:provider.stage}/vendor-invoice/api/endpoint}
+    ADMIN_API_KEY: ${ssm:/omni-dw/${self:provider.stage}/admin/apiKey}

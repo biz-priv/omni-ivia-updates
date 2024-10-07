@@ -1,10 +1,10 @@
 /*
-* File: src\v2\create-shipment.js
-* Project: Omni-ivia-updates
-* Author: Bizcloud Experts
-* Date: 2023-09-28
-* Confidential and Proprietary
-*/
+ * File: src\v2\create-shipment.js
+ * Project: Omni-ivia-updates
+ * Author: Bizcloud Experts
+ * Date: 2023-09-28
+ * Confidential and Proprietary
+ */
 const AWS = require("aws-sdk");
 const { v4: uuidv4 } = require("uuid");
 const momentTZ = require("moment-timezone");
@@ -12,7 +12,11 @@ const { convert } = require("xmlbuilder2");
 const axios = require("axios");
 const { putItem, updateItem } = require("../shared/dynamo");
 const { validatePayload, getStatus } = require("../shared/dataHelper");
-const { sendSNSMessage } = require("../shared/errorNotificationHelper");
+const {
+  sendSNSMessage,
+  sendSESEmail,
+} = require("../shared/errorNotificationHelper");
+const _ = require("lodash");
 
 const {
   IVIA_DDB,
@@ -22,6 +26,9 @@ const {
   IVIA_XML_API_PASS,
   IVIA_XML_UPDATE_URL,
   IVIA_RESPONSE_DDB,
+  STAGE,
+  VENDOR_INVOICE_API_ENDPOINT,
+  ADMIN_API_KEY
 } = process.env;
 
 // const IVIA_CREATE_SHIPMENT_URL =
@@ -60,7 +67,7 @@ module.exports.handler = async (event, context, callback) => {
           iviaCSRes &&
           iviaCSRes?.shipmentId &&
           iviaCSRes.shipmentId.toString().length > 0 &&
-          process.env.STAGE.toUpperCase() != "STG"
+          STAGE.toUpperCase() != "STG"
         ) {
           const houseBills = streamRecord.Housebill.split(",");
           console.log("houseBills", houseBills);
@@ -133,6 +140,126 @@ module.exports.handler = async (event, context, callback) => {
         if (iviaCSRes.status === getStatus().FAILED) {
           await sendSNSMessage(updatePayload);
         }
+        const housebills = streamRecord.Housebill.split(",");
+        console.log("houseBills", housebills);
+
+        await Promise.all(
+          housebills.map(async (housebill) => {
+            try {
+              // Process to update the vendor reference in housebill level
+              await updateVendorReference({
+                housebill,
+                shipmentId: iviaCSRes.shipmentId,
+                houseBillString: _.get(streamRecord, "Housebill", ""),
+                orderId: _.get(streamRecord, "FK_OrderNo", ""),
+                consolNo: _.get(streamRecord, "ConsolNo", ""),
+              });
+            } catch (error) {
+              console.error(
+                `Error updating vendor reference for housebill ${housebill}:`,
+                error.message
+              );
+              await sendSESEmail({
+                message: `
+              <!DOCTYPE html>
+              <html>
+              <head>
+                <style>
+                  body {
+                    font-family: Arial, sans-serif;
+                  }
+                  .container {
+                    padding: 20px;
+                    border: 1px solid #ddd;
+                    border-radius: 5px;
+                    background-color: #f9f9f9;
+                  }
+                  .highlight {
+                    font-weight: bold;
+                  }
+                </style>
+              </head>
+              <body>
+                <div class="container">
+                  <p>Dear Team,</p>
+                  <p>There was an error updating the Vendor Reference for housebill: <strong>${housebill}</strong>.</p>
+                  <p><strong>Error Details:</strong>${formatErrorMessage(error.message)}</p>
+                  <p>Thank you,<br>
+                  Omni Automation System</p>
+                  <p style="font-size: 0.9em; color: #888;">Note: This is a system generated email, Please do not reply to this email.</p>
+                </div>
+              </body>
+              </html>
+              `,
+                subject: `${STAGE.toUpperCase()} - Vendor Reference Update Failed (Housebill: ${housebill}, IVIA Shipment Number: ${
+                  iviaCSRes.shipmentId
+                })`,
+              });
+            }
+          })
+        );
+
+        //  Process to update the vendor reference in consolidation level for P2PConsole and MultistopConsole shipments.
+        if (
+          _.get(streamRecord, "payloadType", "") !== "P2PNonConsol" &&
+          _.get(streamRecord, "ConsolNo", "") !== "0"
+        ) {
+          try {
+            await updateVendorReference({
+              shipmentId: _.get(iviaCSRes, "shipmentId", ""),
+              houseBillString: _.get(streamRecord, "Housebill", ""),
+              orderId: _.get(streamRecord, "FK_OrderNo", ""),
+              consolNo: _.get(streamRecord, "ConsolNo", ""),
+            });
+          } catch (error) {
+            console.error(
+              "🚀 ~ file: create-shipment.js:175 ~ module.exports.handler= ~ error:",
+              error
+            );
+            await sendSESEmail({
+              message: `
+              <!DOCTYPE html>
+              <html>
+              <head>
+                <style>
+                  body {
+                    font-family: Arial, sans-serif;
+                  }
+                  .container {
+                    padding: 20px;
+                    border: 1px solid #ddd;
+                    border-radius: 5px;
+                    background-color: #f9f9f9;
+                  }
+                  .highlight {
+                    font-weight: bold;
+                  }
+                </style>
+              </head>
+              <body>
+                <div class="container">
+                  <p>Dear Team,</p>
+                  <p>There was an error updating the Vendor Reference for Consolidation: <strong>${_.get(
+                    streamRecord,
+                    "ConsolNo",
+                    ""
+                  )}</strong>.</p>
+                 <p><strong>Error Details:</strong>${formatErrorMessage(error.message)}</p>
+                  <p>Thank you,<br>
+                  Omni Automation System</p>
+                  <p style="font-size: 0.9em; color: #888;">Note: This is a system generated email, Please do not reply to this email.</p>
+                </div>
+              </body>
+              </html>
+              `,
+              subject: `${STAGE.toUpperCase()} - Vendor Reference Update Failed (Consolidation: ${_.get(
+                streamRecord,
+                "ConsolNo",
+                ""
+              )}, IVIA Shipment Number: ${iviaCSRes.shipmentId})`,
+            });
+          }
+        }
       } catch (error) {
         console.error("Error:in For loop", error);
       }
@@ -143,6 +270,10 @@ module.exports.handler = async (event, context, callback) => {
     return "error";
   }
 };
+
+function formatErrorMessage(message) {
+  return message.replace(/\n/g, '<br>');
+}
 
 /**
  * create shipment api
@@ -161,15 +292,17 @@ function iviaCreateShipment(payload) {
         },
         data: JSON.stringify(payload),
       };
-      console.log("Request to ivia", momentTZ
-        .tz("America/Chicago")
-        .format("YYYY:MM:DD HH:mm:ss:SSS"))
+      console.log(
+        "Request to ivia",
+        momentTZ.tz("America/Chicago").format("YYYY:MM:DD HH:mm:ss:SSS")
+      );
 
       axios(config)
         .then(function (response) {
-          console.log("Response recieved from ivia", momentTZ
-            .tz("America/Chicago")
-            .format("YYYY:MM:DD HH:mm:ss:SSS"))
+          console.log(
+            "Response recieved from ivia",
+            momentTZ.tz("America/Chicago").format("YYYY:MM:DD HH:mm:ss:SSS")
+          );
           resolve({ shipmentId: response.data, status: getStatus().SUCCESS });
         })
         .catch(function (error) {
@@ -231,4 +364,61 @@ async function iviaSendUpdate(houseBill, shipmentId) {
       reject(error);
     }
   });
+}
+
+async function updateVendorReference({
+  orderId,
+  consolNo,
+  houseBillString,
+  housebill,
+  shipmentId,
+}) {
+  const data = housebill
+    ? {
+        vendorInvoiceRequest: {
+          housebill,
+          operation: "UPDATE",
+          vendorReference: shipmentId.toString(),
+          vendorId: "T19262",
+        },
+      }
+    : {
+        vendorInvoiceRequest: {
+          fileNumber: consolNo,
+          operation: "UPDATE",
+          vendorReference: shipmentId.toString(),
+          vendorId: "T19262",
+        },
+      };
+
+  const config = {
+    method: "post",
+    maxBodyLength: Infinity,
+    url: VENDOR_INVOICE_API_ENDPOINT,
+    headers: {
+      "Content-Type": "application/json",
+      "x-api-key": ADMIN_API_KEY,
+    },
+    data: JSON.stringify(data),
+  };
+
+  try {
+    const response = await axios.request(config);
+    return _.get(response, "data");
+  } catch (error) {
+    const errorMessage = JSON.stringify(
+      _.get(error, "response.data", error.message)
+    );
+
+    throw new Error(`
+      \nError in Update Vendor Reference API.
+      \nFK_OrderNo: ${orderId}
+      \nConsolNo: ${consolNo}
+      \nHousebill: ${houseBillString}
+      \nError Details: ${errorMessage}
+      \nPayload:
+      \n${JSON.stringify(data)}
+      \nNote: The Shipment is tendered to IVIA with Shipment Number: ${shipmentId} but failed to update the vendor reference.
+    `);
+  }
 }
