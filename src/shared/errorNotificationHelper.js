@@ -57,7 +57,7 @@ async function sendSESEmail({ message, subject }) {
   try {
     const params = {
       Destination: {
-        ToAddresses: ["mohammed.sazeed@bizcloudexperts.com", "jahir.uddin@bizcloudexperts.com"],
+        ToAddresses: ["msazeed@omnilogistics.com", "juddin@omnilogistics.com"],
       },
       Message: {
         Body: {
