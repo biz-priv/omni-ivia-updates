@@ -1,3 +1,10 @@
+/*
+* File: src\shared\dynamo.js
+* Project: Omni-ivia-updates
+* Author: Bizcloud Experts
+* Date: 2023-11-06
+* Confidential and Proprietary
+*/
 const AWS = require("aws-sdk");
 const get = require("lodash.get");
 var dynamodb = new AWS.DynamoDB.DocumentClient();

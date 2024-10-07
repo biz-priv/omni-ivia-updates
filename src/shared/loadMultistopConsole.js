@@ -1,3 +1,10 @@
+/*
+* File: src\shared\loadMultistopConsole.js
+* Project: Omni-ivia-updates
+* Author: Bizcloud Experts
+* Date: 2023-09-27
+* Confidential and Proprietary
+*/
 const AWS = require("aws-sdk");
 const {
   getLiftGate,

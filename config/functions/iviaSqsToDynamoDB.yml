@@ -4,6 +4,8 @@ function:
   handler: src/v2/iviaSqsToDynamoDB.handler
   memorySize: 1024
   timeout: 300
+  tags:
+    Name: omni-ivia-sqs-to-dynamo-db-${self:provider.stage}
   # provisionedConcurrency: 5
   # concurrencyAutoscaling: true
   layers:

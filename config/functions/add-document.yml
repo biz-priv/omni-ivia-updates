@@ -4,6 +4,8 @@ function:
   handler: src/v2/add-document-api.handler
   memorySize: 1024
   timeout: 900
+  tags:
+    Name: omni-ivia-add-document-api-${self:provider.stage}
   layers:
     - { Ref: OmniIviaLayerLambdaLayer }
   package:

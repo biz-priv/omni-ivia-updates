@@ -1,4 +1,13 @@
+/*
+* File: src\shared\errorNotificationHelper.js
+* Project: Omni-ivia-updates
+* Author: Bizcloud Experts
+* Date: 2023-03-15
+* Confidential and Proprietary
+*/
 const AWS = require("aws-sdk");
+const ses = new AWS.SES();
+
 /**
  * sns publish function
  * @param {*} params
@@ -44,4 +53,33 @@ async function sendSNSMessage(data) {
   }
 }
 
-module.exports = { sendSNSMessage };
+async function sendSESEmail({ message, subject }) {
+  try {
+    const params = {
+      Destination: {
+        ToAddresses: ["msazeed@omnilogistics.com", "juddin@omnilogistics.com"],
+      },
+      Message: {
+        Body: {
+          Html: {
+            Data: message,
+            Charset: "UTF-8",
+          },
+        },
+        Subject: {
+          Data: subject,
+          Charset: "UTF-8",
+        },
+      },
+      Source: process.env.OMNI_NO_REPLY_EMAIL,
+    };
+    console.info("🚀 ~ file: helper.js:1747 ~ sendSESEmail ~ params:", params);
+
+    await ses.sendEmail(params).promise();
+  } catch (error) {
+    console.error("Error sending email with SES:", error);
+    throw error;
+  }
+}
+
+module.exports = { sendSNSMessage, sendSESEmail };
