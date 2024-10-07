@@ -202,7 +202,7 @@ module.exports.handler = async (event, context, callback) => {
         //  Process to update the vendor reference in consolidation level for P2PConsole and MultistopConsole shipments.
         if (
           _.get(streamRecord, "payloadType", "") !== "P2PNonConsol" &&
-          _.get(streamRecord, "", "") !== "0"
+          _.get(streamRecord, "ConsolNo", "") !== "0"
         ) {
           try {
             await updateVendorReference({
